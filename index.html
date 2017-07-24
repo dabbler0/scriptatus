@@ -1,0 +1,239 @@
+<html>
+<head>
+    <!--<link href="https://fonts.googleapis.com/css?family=MedievalSharp" rel="stylesheet">-->
+<link href="https://fonts.googleapis.com/css?family=Uncial+Antiqua" rel="stylesheet">
+
+<style>
+body {
+    user-select: none;
+    -webkit-user-select: none;
+    font-family: 'Uncial Antiqua', cursive;
+    padding: 0; margin: 0;
+    overflow: hidden;
+}
+#buttons {
+    position: absolute;
+    bottom: 0;
+    width: 400px;
+    left: 50%;
+    margin-left: -200px;
+    text-align: center;
+    margin-bottom: 0;
+    padding: 0;
+    height: 50px;
+}
+.edit-tab {
+    background: rgba(0, 0, 0, 0.5);
+    margin-bottom: 5px;
+    cursor: pointer;
+}
+#edit-control-panel {
+    background: rgba(0, 0, 0, 0.5);
+}
+.tab-canvas {
+    height: 50px;
+    width: 50px;
+}
+.header {
+    font-size: 30px;
+    text-align: center;
+}
+#choice-table {
+    position: absolute;
+    left: 0; right: 0; top: 0; bottom: 0;
+    width: 100%; height: 100%;
+}
+#edit-tab-panel {
+    position: absolute;
+    top: 0; left: 0; bottom: 0;
+    width: 50px;
+}
+#edit-control-panel {
+    position: absolute;
+    top: 0; left: 50px; bottom: 0;
+    width: 100px;
+}
+#edit-edit-panel {
+    position: absolute;
+    top: 0; left: 150px; right: 0; bottom: 0;
+}
+#edit-editor {
+    height: 100%; width: 100%;
+}
+#choice-table > tbody > tr > td {
+    border: 1px solid #000;
+    vertical-align: top !important;
+}
+.barracks-canvas-wrapper {
+    text-align: center;
+}
+.barracks-canvas {
+    background-color: #888;
+}
+#buttons div {
+    overflow: hidden;
+    height: 50px;
+    width: 50px;
+    background-color: rgba(0, 0, 0, 0.5);
+    border: none;
+    margin-left: 5px;
+    margin-right: 5px;
+    margin-bottom: 0;
+    padding: 0px;
+    display: inline-block;
+    cursor: pointer;
+}
+.screen {
+    background-color: rgba(0, 0, 0, 0.5);
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: 100%;
+    display: none;
+    color: #FFF;
+}
+#win-screen-floater, #lose-screen-floater {
+    position: absolute;
+    width: 300px;
+    height: 100px;
+    background-color: rgba(0, 0, 0, 0.5);
+    left: 50%;
+    top: 50%;
+    margin-left: -150px;
+    margin-top: -50px;
+}
+#main-menu {
+    background-color: #000;
+}
+#main-menu-floater {
+    width: 200px;
+    height: 300px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    margin-left: -100px;
+    margin-top: -150px;
+    color: #000;
+    background-color: #FAA460;
+    cursor: default;
+}
+#edit-screen {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    display: none;
+    background-color: #000;
+}
+#edit-screen-floater {
+    position: absolute;
+    left: 20px;
+    top: 20px;
+    right: 20px;
+    bottom: 20px;
+    background-color: #FAA460;
+}
+#edit-screen-footer {
+    width: 100%;
+    position: absolute;
+    left: 0; right:0; bottom: 0;
+    height: 45px;
+}
+#edit-screen-header {
+    width: 100%;
+    position: absolute;
+    left: 0; right:0; top: 0;
+    height: 45px;
+}
+#edit-center {
+    width: 100%;
+    position: absolute;
+    left: 0; right: 0; top: 45px; bottom: 45px;
+}
+.button {
+    font-size: 20px;
+    background: rgba(0, 0, 0, 0.5);
+    color: #CCC;
+    text-align: center;
+    margin: 5px;
+    cursor: pointer;
+}
+.button:hover {
+    color: #FFF;
+}
+</style>
+</head>
+<body>
+    <img id="dirt-asset" src="dirt.png" style="display: none;"/>
+    <img id="stone-asset" src="stone.png" style="display: none;"/>
+    <img id="stone-top-asset" src="stone-top.png" style="display: none;"/>
+    <img id="grass-asset" src="grass.png" style="display: none;"/>
+    <canvas id="viewport" style="width: 100%; height: 100%; position: absolute; top: 0px; left: 0px; right: 0px; bottom: 0px; background: #000;"></canvas>
+    <div id="buttons">
+        <div id="char-1"><canvas id="canvas-1" height=50 width=50></canvas></div>
+        <div id="char-2"><canvas id="canvas-2" height=50 width=50></canvas></div>
+        <div id="char-3"><canvas id="canvas-3" height=50 width=50></canvas></div>
+        <div id="char-4"><canvas id="canvas-4" height=50 width=50></canvas></div>
+        <div id="spectate"><canvas id="spectate-canvas" height=50 width=50></canvas></div>
+        <div id="quit"><canvas id="quit-canvas" height=50 width=50></canvas></div>
+    </div>
+    <div id="win-screen" class="screen">
+        <div id="win-screen-floater">
+            <div class="header">
+                VICTORY
+            </div>
+            <div id="main-menu-win" class="button">Main Menu</div>
+        </div>
+    </div>
+    <div id="lose-screen" class="screen">
+        <div id="lose-screen-floater">
+            <div class="header">
+                DEFEAT
+            </div>
+            <div id="main-menu-lose" class="button">Main Menu</div>
+        </div>
+    </div>
+    <div id="main-menu" class="screen">
+        <div id="main-menu-floater">
+            <div class="header">
+                SCRIPTUS
+            </div>
+            <div id="practice" class="button">Practice</div>
+            <div id="quick-match" class="button">Quick Match</div>
+            <div id="challenge" class="button">Challenge</div>
+            <div id="edit-team" class="button">Edit Team</div>
+            <div id="ratings" class="button">Rankings</div>
+        </div>
+    </div>
+    <div id="edit-screen">
+        <div id="edit-screen-floater">
+            <div id="edit-screen-header" class="header">
+            BARRACKS
+            </div>
+            <div id="edit-center">
+                <div id="edit-tab-panel">
+                    <div class="edit-tab" id="edit-tab-1"><canvas id="tab-1" class="tab-canvas"></canvas></div>
+                    <div class="edit-tab" id="edit-tab-2"><canvas id="tab-2" class="tab-canvas"></canvas></div>
+                    <div class="edit-tab" id="edit-tab-3"><canvas id="tab-3" class="tab-canvas"></canvas></div>
+                    <div class="edit-tab" id="edit-tab-4"><canvas id="tab-4" class="tab-canvas"></canvas></div>
+                </div>
+                <div id="edit-control-panel">
+                </div>
+                <div id="edit-edit-panel">
+                    <div id="edit-editor"></div>
+                </div>
+            </div>
+            <table id="edit-screen-footer">
+                <tr><td>
+                    <div id="back" class="button">BACK</div>
+                </td><td>
+                    <div id="begin" class="button">BEGIN</div>
+                </td>
+            </table>
+        </div>
+    </div>
+    <script src="ace-builds/src-min/ace.js"></script>
+    <script src="build/game.js"></script>
+</body>
+</html>
