@@ -1081,7 +1081,7 @@ play_game = ->
     tile_width = canvas.width / 40
     tile_height = canvas.height / 20
 
-    characters = character_templates.map instantiate_character
+    characters = character_templates.map (x, i) -> instantiate_character SCRIPTS[x], i
 
     # Enemies
     characters = characters.concat [
@@ -1726,19 +1726,26 @@ WALKING_PERIOD = 50
 WALKING_RATIO = 0.7
 SHIELD_RATIO = 0.7
 
-character_templates = [
-    {class: 'Knight', ai: KNIGHT_AI}
-    {class: 'Rogue', ai: ROGUE_AI}
-    {class: 'Archer', ai: ARCHER_AI}
-    {class: 'Mage', ai: MAGE_AI}
+class Script
+    constructor: (@name, @class, @ai) ->
+
+SCRIPTS = [
+    new Script('Basic', 'Mage', MAGE_AI),
+    new Script('Basic', 'Knight', KNIGHT_AI),
+    new Script('Basic', 'Archer', ARCHER_AI),
+    new Script('Basic', 'Rogue', ROGUE_AI)
 ]
 
+character_templates = [0, 0, 0, 0]
+
+'''
 ARCHETYPES = {
     'Mage': new Mage(50, 10, new Vector(25, 85), true)
     'Archer': new Archer(50, 10, new Vector(25, 85), true)
     'Knight': new Knight(50, 10, new Vector(25, 85), true)
     'Rogue': new Rogue(50, 10, new Vector(25, 85), true)
 }
+'''
 
 win_screen = ->
     document.getElementById('win-screen').style.display = 'block'
@@ -1755,12 +1762,42 @@ main_menu = ->
 # Edit screen
 ace_editor = ace.edit document.getElementById 'edit-editor'
 ace_editor.session.setMode 'ace/mode/javascript'
-ace_editor.setValue character_templates[0].ai, -1
+ace_editor.setValue SCRIPTS[character_templates[0]].ai, -1
 
 currently_editing = 0
 
+prototype_list = document.getElementById('prototype-list')
+
+script_elements = []
+selected_element = null
+
+update_prototype_list = ->
+    for script, i in SCRIPTS then do (script, i) ->
+        element = document.createElement 'div'
+        element.className = 'script-' + script.class
+        element.innerText = script.name
+
+        wrapper = document.createElement 'div'
+        wrapper.className = 'button'
+        wrapper.appendChild element
+
+        script_elements.push wrapper
+
+        prototype_list.appendChild wrapper
+
+        element.addEventListener 'click', ->
+            selected_element?.className = selected_element.className.split(' ')[0]
+            wrapper.className += ' selected'
+            selected_element = wrapper
+            character_templates[currently_editing] = i
+
+            ace_editor.setValue SCRIPTS[i].ai, -1
+            do rerender_tabs
+
+do update_prototype_list
+
 ace_editor.on 'change', ->
-    character_templates[currently_editing].ai = ace_editor.getValue()
+    SCRIPTS[character_templates[currently_editing]].ai = ace_editor.getValue()
 
 edit_screen = ->
     document.getElementById('win-screen').style.display = 'none'
@@ -1768,17 +1805,44 @@ edit_screen = ->
     document.getElementById('lose-screen').style.display = 'none'
     document.getElementById('main-menu').style.display = 'none'
 
-    for template, i in character_templates
-        canvas = document.getElementById("tab-#{i + 1}")
-        canvas.width = canvas.height = 50
-        ctx = canvas.getContext '2d'
-        ctx.clearRect 0, 0, canvas.width, canvas.height
-        ARCHETYPES[template.class].render new RenderContext canvas, ctx
+    do rerender_tabs
 
+IMAGE_URLS = {
+    'Mage': 'mage-prototype.png'
+    'Knight': 'knight-prototype.png'
+    'Rogue': 'rogue-prototype.png'
+    'Archer': 'archer-prototype.png'
+}
+
+rerender_tabs = ->
+    for template, i in character_templates
+        document.getElementById("edit-tab-#{i + 1}").style.backgroundImage = "url(\"#{IMAGE_URLS[SCRIPTS[template].class]}\")"
+
+edit_tab_elements = []
+selected_tab_element = null
 for i in [0...4] then do (i) ->
-    document.getElementById("edit-tab-#{i + 1}").addEventListener 'click', (x) ->
+    edit_tab_elements[i] = document.getElementById("edit-tab-#{i + 1}")
+    edit_tab_elements[i].addEventListener 'click', (x) ->
+        selected_tab_element.className = selected_tab_element.className.split(' ')[0]
+        selected_tab_element = edit_tab_elements[i]
+        selected_tab_element.className += ' selected-tab'
+
         currently_editing = i
-        ace_editor.setValue character_templates[i].ai, -1
+
+        element = script_elements[character_templates[i]]
+        selected_element?.className = selected_element.className.split(' ')[0]
+        element.className += ' selected'
+        selected_element = element
+
+        ace_editor.setValue SCRIPTS[character_templates[i]].ai, -1
+
+element = script_elements[character_templates[0]]
+selected_element?.className = selected_element.className.split(' ')[0]
+selected_element = element
+element.className += ' selected'
+
+selected_tab_element = edit_tab_elements[0]
+console.log 'setting selected_tab_element', selected_tab_element
 
 document.getElementById('main-menu-win').addEventListener 'click', main_menu
 document.getElementById('main-menu-lose').addEventListener 'click', main_menu

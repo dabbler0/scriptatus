@@ -24,6 +24,7 @@ body {
 }
 .edit-tab {
     background: rgba(0, 0, 0, 0.5);
+    opacity: 0.5;
     margin-bottom: 5px;
     cursor: pointer;
 }
@@ -51,11 +52,11 @@ body {
 #edit-control-panel {
     position: absolute;
     top: 0; left: 50px; bottom: 0;
-    width: 100px;
+    width: 150px;
 }
 #edit-edit-panel {
     position: absolute;
-    top: 0; left: 150px; right: 0; bottom: 0;
+    top: 0; left: 200px; right: 0; bottom: 0;
 }
 #edit-editor {
     height: 100%; width: 100%;
@@ -151,6 +152,28 @@ body {
     position: absolute;
     left: 0; right: 0; top: 45px; bottom: 45px;
 }
+.script-mage, .script-knight, .script-rogue, .script-archer {
+    background-size: 30px 30px;
+    background-repeat: no-repeat;
+    min-height: 30px;
+    padding-top: 5px;
+    padding-bottom: 5px;
+    padding-right: 5px;
+    padding-left: 35px;
+    text-align: left;
+}
+.script-mage {
+    background-image: url("mage-prototype.png");
+}
+.script-knight {
+    background-image: url("knight-prototype.png");
+}
+.script-archer {
+    background-image: url("archer-prototype.png");
+}
+.script-rogue {
+    background-image: url("rogue-prototype.png");
+}
 .button {
     font-size: 20px;
     background: rgba(0, 0, 0, 0.5);
@@ -159,8 +182,22 @@ body {
     margin: 5px;
     cursor: pointer;
 }
+.selected {
+    background: rgba(128, 128, 128, 0.5);
+}
+.selected-tab {
+    opacity: 1;
+}
 .button:hover {
     color: #FFF;
+}
+#new {
+    color: #CC0;
+    height: 30px;
+    padding: 5px;
+}
+#new:hover {
+    color: #FF0;
 }
 </style>
 </head>
@@ -213,12 +250,19 @@ body {
             </div>
             <div id="edit-center">
                 <div id="edit-tab-panel">
-                    <div class="edit-tab" id="edit-tab-1"><canvas id="tab-1" class="tab-canvas"></canvas></div>
+                    <div class="edit-tab selected-tab" id="edit-tab-1"><canvas id="tab-1" class="tab-canvas"></canvas></div>
                     <div class="edit-tab" id="edit-tab-2"><canvas id="tab-2" class="tab-canvas"></canvas></div>
                     <div class="edit-tab" id="edit-tab-3"><canvas id="tab-3" class="tab-canvas"></canvas></div>
                     <div class="edit-tab" id="edit-tab-4"><canvas id="tab-4" class="tab-canvas"></canvas></div>
                 </div>
                 <div id="edit-control-panel">
+                    <div id="edit-scroller">
+                        <div id="prototype-list">
+                        </div>
+                        <div class="button" id="new">
+                            New Script
+                        </div>
+                    </div>
                 </div>
                 <div id="edit-edit-panel">
                     <div id="edit-editor"></div>
