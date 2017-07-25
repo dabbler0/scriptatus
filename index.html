@@ -11,6 +11,26 @@ body {
     padding: 0; margin: 0;
     overflow: hidden;
 }
+#sword, #bow, #staff, #dagger {
+    position: absolute;
+    width: 200px;
+    height: 300px;
+    margin-left: -100px;
+    top: 50%;
+    margin-top: -150px;
+}
+#sword {
+    left: 16.6%;
+}
+#bow {
+    left: 33.3%;
+}
+#staff {
+    left: 66.6%;
+}
+#dagger {
+    left: 83.3%;
+}
 #buttons {
     position: absolute;
     bottom: 0;
@@ -95,6 +115,9 @@ body {
     height: 100%;
     display: none;
     color: #FFF;
+}
+#main-menu, #edit-screen {
+    background-image: url("wood.png")
 }
 #win-screen-floater, #lose-screen-floater {
     position: absolute;
@@ -232,16 +255,21 @@ body {
         </div>
     </div>
     <div id="main-menu" class="screen">
+        <img src="sword.png" id="sword"/>
+        <img src="bow.png" id="bow"/>
         <div id="main-menu-floater">
             <div class="header">
                 SCRIPTUS
             </div>
             <div id="practice" class="button">Practice</div>
-            <div id="quick-match" class="button">Quick Match</div>
-            <div id="challenge" class="button">Challenge</div>
+            <div id="quick-match" class="button">Ranked</div>
+            <div id="challenge" class="button">Custom</div>
             <div id="edit-team" class="button">Edit Team</div>
-            <div id="ratings" class="button">Rankings</div>
+            <div id="rankings" class="button">Rankings</div>
+            <div id="how-to" class="button">How To Play</div>
         </div>
+        <img src="staff.png" id="staff"/>
+        <img src="dagger.png" id="dagger"/>
     </div>
     <div id="edit-screen">
         <div id="edit-screen-floater">

@@ -676,7 +676,7 @@ class Mage extends Character
         return reader
 
     cast: (position) ->
-        if @spell.burning or @health <= 0 then return
+        if @spell.burning or @casting or @health <= 0 then return
 
         @casting = true
         @casting_age = @age
@@ -789,9 +789,10 @@ class Archer extends Character
             return bullet
 
     nock: ->
-        @loading = true
-        @loading_age = @age
-        @walking_acceleration = 0.15
+        unless @loading or @loaded
+            @loading = true
+            @loading_age = @age
+            @walking_acceleration = 0.15
 
     loose: ->
         @loading = false
@@ -1368,7 +1369,7 @@ play_game = ->
 
 create_ai_from_template = (program) ->
     return """
-    var main_character;
+    var me;
 
     function wrap_angle(ang) {
         return (((ang + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI)) - Math.PI
@@ -1380,24 +1381,32 @@ create_ai_from_template = (program) ->
     }
 
     Vector.prototype.plus = function(o) {
-      return new Vector(this.x + o.x, this.y + o.y);
+        return new Vector(this.x + o.x, this.y + o.y);
     };
 
     Vector.prototype.minus = function(o) {
-      return new Vector(this.x - o.x, this.y - o.y);
+        return new Vector(this.x - o.x, this.y - o.y);
     };
 
     Vector.prototype.times = function(s) {
-      return new Vector(this.x * s, this.y * s);
+        return new Vector(this.x * s, this.y * s);
     };
 
     Vector.prototype.divided_by = function(s) {
-      return new Vector(this.x / s, this.y / s);
+        return new Vector(this.x / s, this.y / s);
     };
 
     Vector.prototype.magnitude = function() {
-      return Math.sqrt(this.x * this.x + this.y * this.y);
+        return Math.sqrt(this.x * this.x + this.y * this.y);
     };
+
+    Vector.prototype.dir_to = function(other) {
+        return other.minus(this).dir();
+    }
+
+    Vector.prototype.distance = function(other) {
+        return this.minus(other).magnitude();
+    }
 
     Vector.prototype.unit = function() {
       return this.divided_by(this.magnitude());
@@ -1411,17 +1420,17 @@ create_ai_from_template = (program) ->
         postMessage({type: 'move', dir: dir})
     }
     function move_toward(pos) {
-        postMessage({type: 'move', dir: pos.minus(main_character.pos).dir()});
+        postMessage({type: 'move', dir: pos.minus(me.pos).dir()});
     }
     function turn(dir) {
         postMessage({type: 'turn', dir: dir})
     }
     function turn_to(dir) {
-        normalized_delta = wrap_angle(dir - main_character.dir);
+        normalized_delta = wrap_angle(dir - me.dir);
         turn(10 * normalized_delta / Math.PI);
     }
     function turn_toward(pos) {
-        var desired_dir = pos.minus(main_character.pos).dir();
+        var desired_dir = pos.minus(me.pos).dir();
         turn_to(desired_dir)
     }
     function strike() {
@@ -1463,7 +1472,7 @@ create_ai_from_template = (program) ->
             spells = info.spells.map(unpack),
             walls = info.walls.map(unpack);
 
-        main_character = unpack(info.main_character);
+        me = unpack(info.main_character);
 
         (function() {
         #{program}
@@ -1471,235 +1480,137 @@ create_ai_from_template = (program) ->
 
         postMessage({type: 'ready'})
     }
-    """
+"""
 
 DUMBO = '''
-        if (Math.random() < 1 / 60) {
-            direction = Math.random() * 2 * Math.PI;
-            move(direction);
-        }
+    if (Math.random() < 1 / 60) {
+        direction = Math.random() * 2 * Math.PI;
+        move(direction);
+    }
 '''
 
 ROGUE_AI = '''
-    start_shooting()
-    for (var i = 0; i < spells.length; i++) {
-        if (spells[i].age >= 30 && main_character.pos.minus(spells[i].pos).magnitude() < 100) {
-            move(main_character.pos.minus(spells[i].pos).dir());
-            return;
-        }
-    }
+    /*
+     * A basic Rogue AI that chases the nearest enemy.
+     *
+     * Improve on this to win more games!
+     */
 
-    characters = characters.filter(function(x) { return !x.allegiance });
+    // Always be shooting knives
+    start_shooting();
 
-    var target;
-    for (var i = 0; i < characters.length; i++) {
-        if (characters[i].type_string == 'mage') {
-            target = characters[i];
-            break;
-        }
-    }
+    // Get players on the board NOT on our team
+    var enemies = characters.filter(function(x) { return !x.allegiance });
 
-    if (!target) {
-        for (var i = 0; i < characters.length; i++) {
-            if (characters[i].type_string == 'archer') {
-                target = characters[i];
-                break;
-            }
-        }
-    }
+    // Sort them by distance to us
+    enemies.sort(function(a, b) {
+        return a.pos.distance(me.pos) - b.pos.distance(me.pos);
+    });
 
-    if (!target) {
-        for (var i = 0; i < characters.length; i++) {
-            if (characters[i].type_string == 'rogue') {
-                target = characters[i];
-                break;
-            }
-        }
-    }
+    // Get nearest enemy
+    var target = enemies[0];
 
-    if (!target) {
-        target = characters[0];
-    }
-
+    // Turn towards it
     turn_toward(target.pos);
 
-    if (target.pos.minus(main_character.pos).magnitude() > 15) {
+    // If we're farther than stabbing range,
+    // move towards it.
+    if (me.pos.distance(target.pos) > 40) {
         move_toward(target.pos);
-    }
-    else {
-        move(main_character.pos.minus(target.pos).dir())
-    }
-    '''
+    }'''
 
 KNIGHT_AI = '''
-    for (var i = 0; i < spells.length; i++) {
-        if (main_character.pos.minus(spells[i].pos).magnitude() < 100) {
-            move(main_character.pos.minus(spells[i].pos).dir());
-            return;
-        }
-    }
+    /*
+     * A basic Knight AI that chases the nearest enemy.
+     *
+     * Improve on this to win more games!
+     */
 
-    characters = characters.filter(function(x) { return !x.allegiance });
+    // Get players on the board NOT on our team
+    var enemies = characters.filter(function(x) { return !x.allegiance });
 
-    var target;
-    for (var i = 0; i < characters.length; i++) {
-        if (characters[i].type_string == 'rogue') {
-            target = characters[i];
-            break;
-        }
-    }
+    // Sort them by distance to us
+    enemies.sort(function(a, b) {
+        return a.pos.distance(me.pos) - b.pos.distance(me.pos);
+    });
 
-    if (!target) {
-        for (var i = 0; i < characters.length; i++) {
-            if (characters[i].type_string == 'mage') {
-                target = characters[i];
-                break;
-            }
-        }
-    }
+    // Get nearest enemy
+    var target = enemies[0];
 
-    if (!target) {
-        for (var i = 0; i < characters.length; i++) {
-            if (characters[i].type_string == 'knight') {
-                target = characters[i];
-                break;
-            }
-        }
-    }
-
-    if (!target) {
-        target = characters[0];
-    }
-
+    // Turn towards it and move towards it
     turn_toward(target.pos);
     move_toward(target.pos);
 
-    if (target.pos.minus(main_character.pos).magnitude() < 40) {
-        if (!main_character.striking_forward && !main_character.striking_sideways) {
-            strike();
-        }
-    }
-    '''
+    // If we're in range, strike
+    if (me.pos.distance(target.pos) <= 40) {
+        strike();
+    }'''
 
 MAGE_AI = '''
-    characters = characters.filter(function(x) { return !x.allegiance });
+    /*
+     * A basic Mage AI that flees and casts spells at the nearest enemy.
+     *
+     * Improve on this to win more games!
+     */
 
-    for (var i = 0; i < spells.length; i++) {
-        if (main_character.pos.minus(spells[i].pos).magnitude() < 100) {
-            cancel_casting();
-            move(main_character.pos.minus(spells[i].pos).dir());
-            return;
-        }
+    // Get players on the board NOT on our team
+    var enemies = characters.filter(function(x) { return !x.allegiance });
+
+    // Sort them by distance to us
+    enemies.sort(function(a, b) {
+        return a.pos.distance(me.pos) - b.pos.distance(me.pos);
+    });
+
+    // Get nearest enemy
+    var target = enemies[0];
+
+    // If the enemy is too close, run away!
+    if (me.pos.distance(target.pos) < 200) {
+        cancel_casting();
+        move(target.pos.dir_to(me.pos));
     }
 
-    var target;
-    for (var i = 0; i < characters.length; i++) {
-        if (characters[i].type_string == 'mage') {
-            target = characters[i];
-            break;
-        }
-    }
-
-    if (!target) {
-        for (var i = 0; i < characters.length; i++) {
-            if (characters[i].type_string == 'knight') {
-                target = characters[i];
-                break;
-            }
-        }
-    }
-
-    if (!target) {
-        for (var i = 0; i < characters.length; i++) {
-            if (characters[i].type_string == 'archer') {
-                target = characters[i];
-                break;
-            }
-        }
-    }
-
-    if (!target) {
-        target = characters[0];
-    }
-
-    if (!main_character.casting) {
+    // Otherwise, cast a spell at them
+    else {
         cast(target.pos);
-    }
-    '''
+    }'''
 
 ARCHER_AI = '''
-    for (var i = 0; i < spells.length; i++) {
-        if (main_character.pos.minus(spells[i].pos).magnitude() < 100) {
-            loose();
-            move(main_character.pos.minus(spells[i].pos).dir());
-            return;
-        }
-    }
+    /*
+     * A basic Archer AI that flees and shoots arrows at the nearest enemy.
+     *
+     * Improve on this to win more games!
+     */
 
-    allies = characters.filter(function(x) { return x.allegiance; });
-    characters = characters.filter(function(x) { return !x.allegiance });
+    // Get players on the board NOT on our team
+    var enemies = characters.filter(function(x) { return !x.allegiance });
 
-    var target;
-    for (var i = 0; i < characters.length; i++) {
-        if (characters[i].type_string == 'mage') {
-            target = characters[i];
-            break;
-        }
-    }
+    // Sort them by distance to us
+    enemies.sort(function(a, b) {
+        return a.pos.distance(me.pos) - b.pos.distance(me.pos);
+    });
 
-    if (!target) {
-        for (var i = 0; i < characters.length; i++) {
-            if (characters[i].type_string == 'knight') {
-                target = characters[i];
-                break;
-            }
-        }
-    }
+    // Get nearest enemy
+    var target = enemies[0];
 
-    if (!target) {
-        for (var i = 0; i < characters.length; i++) {
-            if (characters[i].type_string == 'archer') {
-                target = characters[i];
-                break;
-            }
-        }
-    }
-
-    if (!target) {
-        target = characters[0];
-    }
-
-    var distance = main_character.pos.minus(target.pos).magnitude()
-
-    if (distance > 600) {
-        move_toward(target.pos);
-    }
-    else {
-        move(main_character.pos.minus(target.pos).dir());
-    }
-
+    // Turn to them
     turn_toward(target.pos);
 
-    if (!main_character.loading && !main_character.loaded) {
-        nock();
+    // If the enemy is too close, run away!
+    if (me.pos.distance(target.pos) < 200) {
+        loose();
+        move(target.pos.dir_to(me.pos));
     }
-    if (main_character.ready_to_shoot) {
-        // Check to see enemy is in sight
-        if (Math.abs(wrap_angle(
-            target.pos.minus(main_character.pos).dir() - main_character.dir
-        )) > 0.05) return;
 
-        // Check to make sure no allies are in the way
-        for (var i = 0; i < allies.length; i++) {
-            if (Math.abs(wrap_angle(
-                allies[i].pos.minus(main_character.pos).dir() - main_character.dir
-            )) < 0.1 && allies[i].pos.minus(main_character.pos).magnitude() < distance) return;
-        }
-
-        // Fire!
+    // If we have an arrow ready, shoot it at them.
+    else if (me.ready_to_shoot) {
         loose();
     }
-    '''
+
+    // Otherwise, nock one.
+    else {
+        nock();
+    }'''
 
 DEFAULT_COLORS = {
     pants: 'black'
