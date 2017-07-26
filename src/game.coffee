@@ -74,7 +74,7 @@ class AiWorker
     tick: (info) ->
         if @ready
             @worker.postMessage {
-                characters: info.characters.filter((x) -> x.health > 0).map (x) => x.create_reader(@character.allegiance)
+                characters: info.characters.filter((x) => x.health > 0 and x isnt @character).map (x) => x.create_reader(@character.allegiance)
                 bullets: info.bullets.filter((x) -> x.alive).map (x) -> x.create_reader()
                 spells: info.spells.filter((x) -> x.alive).map (x) -> x.create_reader()
                 walls: info.walls.map (x) -> x.create_reader()
@@ -117,7 +117,7 @@ class Character
         @health,
         @player_controlled,
         allegiance: @allegiance is allegiance,
-        @type_string
+        class: @type_string
     }
 
     damage: (damage) ->
@@ -437,7 +437,7 @@ class Knight extends Character
         else if @striking_forward
             @health -= damage / 2
         else
-            @health -= damage / 3
+            @health -= damage / 6
 
     tick: ->
         super
@@ -995,20 +995,25 @@ class Wall
         ctx.fillStyle = stone_top_asset
         ctx.fillRect @pos.x, @pos.y - WALL_HEIGHT, @width, @height
 
-index_positions = [
+allied_positions = [
     new Vector(50, 50)
     new Vector(50, 100)
     new Vector(100, 50)
     new Vector(100, 100)
 ]
-instantiate_character = (template, index) ->
+instantiate_character = (template, index, allegiance) ->
+    if allegiance
+        index_positions = allied_positions
+    else
+        index_positions = allied_positions.map (x) -> new Vector(BOARD_WIDTH, BOARD_HEIGHT).minus x
+
     switch template.class
         when 'Mage'
             return new Mage(
                 50,
                 10,
                 index_positions[index].clone(),
-                true,
+                allegiance,
                 template.ai
             )
         when 'Knight'
@@ -1016,7 +1021,7 @@ instantiate_character = (template, index) ->
                 50,
                 10,
                 index_positions[index].clone(),
-                true,
+                allegiance,
                 template.ai
             )
         when 'Rogue'
@@ -1024,7 +1029,7 @@ instantiate_character = (template, index) ->
                 50,
                 10,
                 index_positions[index].clone(),
-                true,
+                allegiance,
                 template.ai
             )
         when 'Archer'
@@ -1032,7 +1037,7 @@ instantiate_character = (template, index) ->
                 50,
                 10,
                 index_positions[index].clone(),
-                true,
+                allegiance,
                 template.ai
             )
 
@@ -1082,15 +1087,10 @@ play_game = ->
     tile_width = canvas.width / 40
     tile_height = canvas.height / 20
 
-    characters = character_templates.map (x, i) -> instantiate_character SCRIPTS[x], i
+    characters = character_templates.map (x, i) -> instantiate_character SCRIPTS[x], i, true
 
     # Enemies
-    characters = characters.concat [
-        new Mage(50, 10, new Vector(BOARD_WIDTH - 50, BOARD_HEIGHT - 50), false, MAGE_AI),
-        new Rogue(50, 10, new Vector(BOARD_WIDTH - 100, BOARD_HEIGHT - 50), false, ROGUE_AI)
-        new Knight(50, 10, new Vector(BOARD_WIDTH - 100, BOARD_HEIGHT - 100), false, KNIGHT_AI),
-        new Archer(50, 10, new Vector(BOARD_WIDTH - 50, BOARD_HEIGHT - 100), false, ARCHER_AI)
-    ]
+    characters = characters.concat enemy_templates.map (x, i) -> instantiate_character SCRIPTS[x], i, false
 
     should_continue_tick = true
 
@@ -1278,7 +1278,7 @@ play_game = ->
             # Detect character intersection for knights
             if character.striking_sideways
                 for target in characters when target isnt character and character.health > 0
-                    if character.pos.minus(target.pos).magnitude() < character.radius * 2.5 + target.radius and
+                    if character.pos.minus(target.pos).magnitude() < character.radius * 4 + target.radius and
                             Math.abs(wrap_angle(target.pos.minus(character.pos).dir() - character.dir)) < Math.PI / 2
                         target.damage 3
 
@@ -1542,7 +1542,7 @@ KNIGHT_AI = '''
     move_toward(target.pos);
 
     // If we're in range, strike
-    if (me.pos.distance(target.pos) <= 40) {
+    if (me.pos.distance(target.pos) <= 55) {
         strike();
     }'''
 
@@ -1640,21 +1640,32 @@ SHIELD_RATIO = 0.7
 class Script
     constructor: (@name, @class, @ai) ->
 
-SCRIPTS = [
-    new Script('Basic', 'Mage', MAGE_AI),
-    new Script('Basic', 'Knight', KNIGHT_AI),
-    new Script('Basic', 'Archer', ARCHER_AI),
-    new Script('Basic', 'Rogue', ROGUE_AI)
-]
+if 'scripts' of localStorage
+    SCRIPTS = JSON.parse(localStorage.scripts).map (x) -> new Script x[0], x[1], x[2]
+else
+    SCRIPTS = [
+        new Script('Basic', 'Mage', MAGE_AI),
+        new Script('Basic', 'Knight', KNIGHT_AI),
+        new Script('Basic', 'Archer', ARCHER_AI),
+        new Script('Basic', 'Rogue', ROGUE_AI)
+    ]
 
-character_templates = [0, 0, 0, 0]
+if 'team' of localStorage
+    character_templates = JSON.parse localStorage.team
+else
+    character_templates = [0, 0, 0, 0]
+
+if 'practice_opponent' of localStorage
+    enemy_templates = JSON.parse localStorage.practice_opponent
+else
+    enemy_templates = [0, 1, 2, 3]
 
 '''
 ARCHETYPES = {
-    'Mage': new Mage(50, 10, new Vector(25, 85), true)
-    'Archer': new Archer(50, 10, new Vector(25, 85), true)
-    'Knight': new Knight(50, 10, new Vector(25, 85), true)
-    'Rogue': new Rogue(50, 10, new Vector(25, 85), true)
+    'Mage': new Mage(50, 10, new Vector(25, 85), false)
+    'Archer': new Archer(50, 10, new Vector(25, 85), false)
+    'Knight': new Knight(50, 10, new Vector(25, 85), false)
+    'Rogue': new Rogue(50, 10, new Vector(25, 85), false)
 }
 '''
 
@@ -1671,18 +1682,40 @@ main_menu = ->
     document.getElementById('main-menu').style.display = 'block'
 
 # Edit screen
-ace_editor = ace.edit document.getElementById 'edit-editor'
+edit_element = document.getElementById 'edit-editor'
+edit_element.oncontextmenu = (event) -> event.stopPropagation()
+ace_editor = ace.edit edit_element
 ace_editor.session.setMode 'ace/mode/javascript'
 ace_editor.setValue SCRIPTS[character_templates[0]].ai, -1
 
 currently_editing = 0
 
 prototype_list = document.getElementById('prototype-list')
+enemy_prototype_list = document.getElementById('enemy-prototype-list')
 
-script_elements = []
+script_elements = null
 selected_element = null
+enemy_script_elements = null
+enemy_selected_element = null
+
+context_menu = document.getElementById 'context-menu'
+
+contexted_element = null
+contexted_index = null
+
+document.body.addEventListener 'click', (event) ->
+    context_menu.style.display = 'none'
+    contexted_element?.className = contexted_element.className.split(' ').filter((x) -> x isnt 'contexted').join(' ')
+    contexted_element = null
+
+document.body.oncontextmenu = (event) ->
+    return false
 
 update_prototype_list = ->
+    script_elements = []
+    selected_element = null
+
+    prototype_list.innerHTML = ''
     for script, i in SCRIPTS then do (script, i) ->
         element = document.createElement 'div'
         element.className = 'script-' + script.class
@@ -1691,6 +1724,19 @@ update_prototype_list = ->
         wrapper = document.createElement 'div'
         wrapper.className = 'button'
         wrapper.appendChild element
+
+        wrapper.oncontextmenu = (event) ->
+            context_menu.style.display = 'block'
+            context_menu.style.left = event.clientX
+            context_menu.style.top = event.clientY
+
+            contexted_element?.className = contexted_element.className.split(' ').filter((x) -> x isnt 'contexted').join(' ')
+            wrapper.className += ' contexted'
+            console.log 'setting contexted element to', wrapper
+            contexted_element = wrapper
+            contexted_index = i
+
+            return false
 
         script_elements.push wrapper
 
@@ -1701,16 +1747,53 @@ update_prototype_list = ->
             wrapper.className += ' selected'
             selected_element = wrapper
             character_templates[currently_editing] = i
+            localStorage.team = JSON.stringify character_templates
 
             ace_editor.setValue SCRIPTS[i].ai, -1
             do rerender_tabs
 
+    enemy_script_elements = []
+    enemy_selected_element = null
+
+    enemy_prototype_list.innerHTML = ''
+    for script, i in SCRIPTS then do (script, i) ->
+        element = document.createElement 'div'
+        element.className = 'script-' + script.class
+        element.innerText = script.name
+
+        wrapper = document.createElement 'div'
+        wrapper.className = 'button'
+        wrapper.appendChild element
+
+        enemy_script_elements.push wrapper
+
+        enemy_prototype_list.appendChild wrapper
+
+        element.addEventListener 'click', ->
+            enemy_selected_element?.className = selected_element.className.split(' ')[0]
+            wrapper.className += ' selected'
+            enemy_selected_element = wrapper
+            enemy_templates[enemy_currently_editing] = i
+            localStorage.practice_opponent = JSON.stringify enemy_templates
+
+            do rerender_enemy_tabs
+
 do update_prototype_list
+
+save_timeout = null
+save = ->
+    if save_timeout?
+        clearTimeout save_timeout
+    save_timeout = setTimeout (->
+        localStorage.scripts = JSON.stringify SCRIPTS.map (x) -> [x.name, x.class, x.ai]
+    ), 150
 
 ace_editor.on 'change', ->
     SCRIPTS[character_templates[currently_editing]].ai = ace_editor.getValue()
+    do save
 
-edit_screen = ->
+edit_screen = (from) ->
+    document.getElementById('edit-screen-header').innerText = from
     document.getElementById('win-screen').style.display = 'none'
     document.getElementById('edit-screen').style.display = 'block'
     document.getElementById('lose-screen').style.display = 'none'
@@ -1728,6 +1811,12 @@ IMAGE_URLS = {
 rerender_tabs = ->
     for template, i in character_templates
         document.getElementById("edit-tab-#{i + 1}").style.backgroundImage = "url(\"#{IMAGE_URLS[SCRIPTS[template].class]}\")"
+
+rerender_enemy_tabs = ->
+    for template, i in enemy_templates
+        document.getElementById("enemy-tab-#{i + 1}").style.backgroundImage = "url(\"evil-#{IMAGE_URLS[SCRIPTS[template].class]}\")"
+
+do rerender_enemy_tabs
 
 edit_tab_elements = []
 selected_tab_element = null
@@ -1747,19 +1836,109 @@ for i in [0...4] then do (i) ->
 
         ace_editor.setValue SCRIPTS[character_templates[i]].ai, -1
 
+enemy_currently_editing = 0
+enemy_tab_elements = []
+enemy_selected_tab_element = null
+for i in [0...4] then do (i) ->
+    enemy_tab_elements[i] = document.getElementById("enemy-tab-#{i + 1}")
+    enemy_tab_elements[i].addEventListener 'click', (x) ->
+        enemy_selected_tab_element.className = enemy_selected_tab_element.className.split(' ')[0]
+        enemy_selected_tab_element = enemy_tab_elements[i]
+        enemy_selected_tab_element.className += ' selected-tab'
+
+        enemy_currently_editing = i
+
+        element = enemy_script_elements[enemy_templates[i]]
+        enemy_selected_element?.className = enemy_selected_element.className.split(' ')[0]
+        element.className += ' selected'
+        enemy_selected_element = element
+
+element = enemy_script_elements[enemy_templates[0]]
+enemy_selected_element?.className = enemy_selected_element.className.split(' ')[0]
+enemy_selected_element = element
+element.className += ' selected'
+
 element = script_elements[character_templates[0]]
 selected_element?.className = selected_element.className.split(' ')[0]
 selected_element = element
 element.className += ' selected'
 
 selected_tab_element = edit_tab_elements[0]
-console.log 'setting selected_tab_element', selected_tab_element
+enemy_selected_tab_element = enemy_tab_elements[0]
 
 document.getElementById('main-menu-win').addEventListener 'click', main_menu
 document.getElementById('main-menu-lose').addEventListener 'click', main_menu
-document.getElementById('quick-match').addEventListener 'click', edit_screen
-document.getElementById('edit-team').addEventListener 'click', edit_screen
+document.getElementById('practice').addEventListener 'click', -> edit_screen 'PRACTICE'
+document.getElementById('random').addEventListener 'click', -> edit_screen 'RANDOM'
+document.getElementById('custom').addEventListener 'click', -> edit_screen 'CUSTOM'
 document.getElementById('begin').addEventListener 'click', play_game
 document.getElementById('back').addEventListener 'click', main_menu
+
+class_elements = {
+    'Mage': document.getElementById('mage-select'),
+    'Rogue': document.getElementById('rogue-select'),
+    'Knight': document.getElementById('knight-select'),
+    'Archer': document.getElementById('archer-select')
+}
+
+selected_class_element = class_elements['Knight']
+selected_class = 'Knight'
+
+class_elements['Archer'].addEventListener 'click', ->
+    selected_class_element.style.backgroundColor = ''
+    selected_class_element = class_elements['Archer']
+    selected_class_element.style.backgroundColor = '#888'
+
+    selected_class = 'Archer'
+
+class_elements['Rogue'].addEventListener 'click', ->
+    selected_class_element.style.backgroundColor = ''
+    selected_class_element = class_elements['Rogue']
+    selected_class_element.style.backgroundColor = '#888'
+
+    selected_class = 'Rogue'
+
+class_elements['Knight'].addEventListener 'click', ->
+    selected_class_element.style.backgroundColor = ''
+    selected_class_element = class_elements['Knight']
+    selected_class_element.style.backgroundColor = '#888'
+
+    selected_class = 'Knight'
+
+class_elements['Mage'].addEventListener 'click', ->
+    selected_class_element.style.backgroundColor = ''
+    selected_class_element = class_elements['Mage']
+    selected_class_element.style.backgroundColor = '#888'
+
+    selected_class = 'Mage'
+
+document.getElementById('new').addEventListener 'click', ->
+    document.getElementById('dialog-screen').style.display = 'block'
+    document.getElementById('name').value = ''
+
+    selected_class = 'Knight'
+    selected_class_element.style.backgroundColor = ''
+    selected_class_element = class_elements['Knight']
+    selected_class_element.style.backgroundColor = '#888'
+
+document.getElementById('create').addEventListener 'click', ->
+    document.getElementById('dialog-screen').style.display = ''
+
+    SCRIPTS.push new Script document.getElementById('name').value, selected_class, ''
+
+    do update_prototype_list
+    do save
+
+document.getElementById('delete').addEventListener 'click', ->
+    SCRIPTS.splice contexted_index, 1
+    character_templates = character_templates.map (x) -> if x >= contexted_index then x - 1 else x
+    enemy_templates = enemy_templates.map (x) -> if x >= contexted_index then x - 1 else x
+
+    localStorage.team = JSON.stringify character_templates
+    localStorage.practice_opponent = JSON.stringify enemy_templates
+
+    do update_prototype_list
+    do rerender_tabs
+    do save
 
 main_menu()

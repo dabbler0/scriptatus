@@ -31,6 +31,20 @@ body {
 #dagger {
     left: 83.3%;
 }
+#name-wrapper {
+    padding: 5px;
+}
+#name {
+    width: 100%;
+    height: 30px;
+    font-size: 25px;
+    font-family: inherit;
+    text-align: center;
+    background-color: rgba(0, 0, 0, 0.5);
+    border: 1px solid #000;
+    outline: none;
+    color: #FF0;
+}
 #buttons {
     position: absolute;
     bottom: 0;
@@ -45,18 +59,20 @@ body {
 .edit-tab {
     background: rgba(0, 0, 0, 0.5);
     opacity: 0.5;
-    margin-bottom: 5px;
     cursor: pointer;
+    width: 50px;
+    height: 50px;
 }
 #edit-control-panel {
     background: rgba(0, 0, 0, 0.5);
+    overflow: auto;
 }
 .tab-canvas {
     height: 50px;
     width: 50px;
 }
 .header {
-    font-size: 30px;
+    font-size: 25px;
     text-align: center;
 }
 #choice-table {
@@ -68,6 +84,8 @@ body {
     position: absolute;
     top: 0; left: 0; bottom: 0;
     width: 50px;
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 #edit-control-panel {
     position: absolute;
@@ -105,6 +123,7 @@ body {
     cursor: pointer;
 }
 .screen {
+    z-index: 999;
     background-color: rgba(0, 0, 0, 0.5);
     position: absolute;
     top: 0;
@@ -119,7 +138,41 @@ body {
 #main-menu, #edit-screen {
     background-image: url("wood.png")
 }
-#win-screen-floater, #lose-screen-floater {
+
+#knight-select {
+    background-image: url("knight-prototype.png");
+    height: 50px;
+    width: 50px;
+    position: absolute;
+    left: 50px;
+    cursor: pointer;
+}
+#archer-select {
+    background-image: url("archer-prototype.png");
+    height: 50px;
+    width: 50px;
+    position: absolute;
+    left: 100px;
+    cursor: pointer;
+}
+#rogue-select {
+    background-image: url("rogue-prototype.png");
+    height: 50px;
+    width: 50px;
+    position: absolute;
+    left: 150px;
+    cursor: pointer;
+}
+#mage-select {
+    background-image: url("mage-prototype.png");
+    height: 50px;
+    width: 50px;
+    position: absolute;
+    left: 200px;
+    cursor: pointer;
+}
+
+#win-screen-floater, #lose-screen-floater, #dialog-screen-floater {
     position: absolute;
     width: 300px;
     height: 100px;
@@ -129,8 +182,13 @@ body {
     margin-left: -150px;
     margin-top: -50px;
 }
+#dialog-screen-floater {
+    height: 180px;
+    margin-top: -90px;
+}
 #main-menu {
     background-color: #000;
+    z-index: 1;
 }
 #main-menu-floater {
     width: 200px;
@@ -141,7 +199,8 @@ body {
     margin-left: -100px;
     margin-top: -150px;
     color: #000;
-    background-color: #FAA460;
+    /*background-color: #FAA460;*/
+    background-image: url("scriptatus.png");
     cursor: default;
 }
 #edit-screen {
@@ -156,7 +215,26 @@ body {
     top: 20px;
     right: 20px;
     bottom: 20px;
-    background-color: #FAA460;
+    background-image: url("parchment-edge.png"); /*#FAA460;*/
+}
+#edit-screen-background {
+    position: absolute;
+    left: 10px;
+    top: 10px;
+    right: 10px;
+    bottom: 10px;
+    background-color: #fae978;
+}
+#context-menu {
+    position: absolute;
+    z-index: 999;
+    top: 0; left; 0;
+    width: 130px;
+    height: 80px;
+    box-sizing: border-box;
+    background-image: url("context-menu.png");
+    padding: 5px;
+    display: none;
 }
 #edit-screen-footer {
     width: 100%;
@@ -168,13 +246,91 @@ body {
     width: 100%;
     position: absolute;
     left: 0; right:0; top: 0;
+    padding-top: 10px;
+    padding-bottom: 5px;
     height: 45px;
 }
 #edit-center {
     width: 100%;
     position: absolute;
-    left: 0; right: 0; top: 45px; bottom: 45px;
+    left: 0; right: 0; top: 60px; bottom: 45px;
+    overflow: hidden;
 }
+#edit-choose-enemy {
+    position: absolute;
+    width: 250px;
+    height: 50px;
+    top: 5px;
+    right: 10px;
+    overflow: hidden;
+    z-index: 998;
+}
+#edit-choose-enemy:hover {
+    height: 300px;
+}
+#enemy-prototype-list {
+    position: absolute;
+    width: 250px;
+    top: 50px;
+    overflow: auto;
+    background: rgba(0, 0, 0, 0.5);
+    height: 250px;
+}
+#enemy-prototype-list .script-mage {
+    background-image: url("evil-mage-prototype.png");
+}
+#enemy-prototype-list .script-knight {
+    background-image: url("evil-knight-prototype.png");
+}
+#enemy-prototype-list .script-archer {
+    background-image: url("evil-archer-prototype.png");
+}
+#enemy-prototype-list .script-rogue {
+    background-image: url("evil-rogue-prototype.png");
+}
+.enemy-tab {
+    height: 50px;
+    width: 50px;
+    position: absolute;
+    top: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+}
+#vs {
+    left: 0;
+    font-size: 20px;
+    height: 50px;
+    line-height: 50px;
+    text-align: center;
+    color: #FFF;
+    width: 50px;
+    position: absolute;
+    top: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+}
+#enemy-tab-1 {
+    left: 50px;
+    cursor: pointer;
+}
+#enemy-tab-2 {
+    left: 100px;
+    cursor: pointer;
+}
+#enemy-tab-3 {
+    left: 150px;
+    cursor: pointer;
+}
+#enemy-tab-4 {
+    left: 200px;
+    cursor: pointer;
+}
+#edit-choose-enemy:hover .enemy-tab {
+    opacity: 0.5;
+}
+/*
+#edit-choose-enemy:hover .enemy-tab:hover {
+    opacity: 1;
+}
+*/
 .script-mage, .script-knight, .script-rogue, .script-archer {
     background-size: 30px 30px;
     background-repeat: no-repeat;
@@ -205,10 +361,10 @@ body {
     margin: 5px;
     cursor: pointer;
 }
-.selected {
-    background: rgba(128, 128, 128, 0.5);
+.selected, .contexted {
+    background: #888 /*rgba(128, 128, 128, 0.5);*/
 }
-.selected-tab {
+.selected-tab, #edit-choose-enemy:hover .selected-tab {
     opacity: 1;
 }
 .button:hover {
@@ -216,11 +372,21 @@ body {
 }
 #new {
     color: #CC0;
-    height: 30px;
+    min-height: 30px;
     padding: 5px;
 }
 #new:hover {
     color: #FF0;
+}
+#footer {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 30px;
+    font-size: 10px;
+    text-align: center;
+    z-index: 9999;
 }
 </style>
 </head>
@@ -257,31 +423,52 @@ body {
     <div id="main-menu" class="screen">
         <img src="sword.png" id="sword"/>
         <img src="bow.png" id="bow"/>
+        <img src="staff.png" id="staff"/>
+        <img src="dagger.png" id="dagger"/>
         <div id="main-menu-floater">
             <div class="header">
-                SCRIPTUS
+                SCRIPTATUS
             </div>
             <div id="practice" class="button">Practice</div>
-            <div id="quick-match" class="button">Ranked</div>
-            <div id="challenge" class="button">Custom</div>
-            <div id="edit-team" class="button">Edit Team</div>
+            <div id="random" class="button">Random</div>
+            <div id="custom" class="button">Custom</div>
             <div id="rankings" class="button">Rankings</div>
             <div id="how-to" class="button">How To Play</div>
         </div>
-        <img src="staff.png" id="staff"/>
-        <img src="dagger.png" id="dagger"/>
     </div>
     <div id="edit-screen">
         <div id="edit-screen-floater">
+            <div id='edit-screen-background'></div>
             <div id="edit-screen-header" class="header">
-            BARRACKS
+            PRACTICE
+            </div>
+            <div id="edit-choose-enemy">
+                <div id="edit-choose-enemy-tabs">
+                    <div id="vs">
+                        VS.
+                    </div>
+                    <div id="enemy-tab-1" class="enemy-tab selected-tab">
+                        <canvas id="enemy-canvas-1"></canvas>
+                    </div>
+                    <div id="enemy-tab-2" class="enemy-tab">
+                        <canvas id="enemy-canvas-2"></canvas>
+                    </div>
+                    <div id="enemy-tab-3" class="enemy-tab">
+                        <canvas id="enemy-canvas-3"></canvas>
+                    </div>
+                    <div id="enemy-tab-4" class="enemy-tab">
+                        <canvas id="enemy-canvas-4"></canvas>
+                    </div>
+                </div>
+                <div id="enemy-prototype-list">
+                </div>
             </div>
             <div id="edit-center">
                 <div id="edit-tab-panel">
-                    <div class="edit-tab selected-tab" id="edit-tab-1"><canvas id="tab-1" class="tab-canvas"></canvas></div>
-                    <div class="edit-tab" id="edit-tab-2"><canvas id="tab-2" class="tab-canvas"></canvas></div>
-                    <div class="edit-tab" id="edit-tab-3"><canvas id="tab-3" class="tab-canvas"></canvas></div>
-                    <div class="edit-tab" id="edit-tab-4"><canvas id="tab-4" class="tab-canvas"></canvas></div>
+                    <div class="edit-tab selected-tab" id="edit-tab-1"></div>
+                    <div class="edit-tab" id="edit-tab-2"></div>
+                    <div class="edit-tab" id="edit-tab-3"></div>
+                    <div class="edit-tab" id="edit-tab-4"></div>
                 </div>
                 <div id="edit-control-panel">
                     <div id="edit-scroller">
@@ -303,6 +490,33 @@ body {
                     <div id="begin" class="button">BEGIN</div>
                 </td>
             </table>
+        </div>
+    </div>
+    <div id="dialog-screen" class="screen">
+        <div id="dialog-screen-floater">
+            <div id="dialog-header" class="header">
+                New Script
+            </div>
+            <div id="class-selection" style="position:relative;height:55px;">
+                <div id="knight-select"></div>
+                <div id="archer-select"></div>
+                <div id="rogue-select"></div>
+                <div id="mage-select"></div>
+            </div>
+            <div id="name-wrapper">
+                <input id="name"/>
+            </div>
+            <div id="create" class="button">
+                Create
+            </div>
+        </div>
+    </div>
+    <div id="context-menu">
+        <div class="button" id="delete">
+            Delete
+        </div>
+        <div class="button" id="rename">
+            Rename
         </div>
     </div>
     <script src="ace-builds/src-min/ace.js"></script>
