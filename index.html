@@ -8,6 +8,7 @@ body {
     user-select: none;
     -webkit-user-select: none;
     font-family: 'Uncial Antiqua', cursive;
+    /*font-family: monospace;*/
     padding: 0; margin: 0;
     overflow: hidden;
 }
@@ -190,7 +191,7 @@ body {
     background-color: #000;
     z-index: 1;
 }
-#main-menu-floater {
+#main-menu-floater, #signin, #registration {
     width: 200px;
     height: 300px;
     position: absolute;
@@ -203,6 +204,52 @@ body {
     background-image: url("scriptatus.png");
     cursor: default;
 }
+#registration-link, #signin-link {
+    color: #00F;
+    text-decoration: underline;
+    font-size: 12px;
+    text-align: center;
+    cursor: pointer;
+}
+#main-menu-floater {
+    display: none;
+}
+.signin-form {
+    width: 180px; /*100%;*/
+    margin-left: 10px;
+    margin-right: 10px;
+}
+.signin-form input {
+    padding-left: 5px;
+    padding-right: 5px;
+    background-color: rgba(0, 0, 0, 0.5);
+    border: none;
+    color: #FFF;
+    width: 180px;
+    margin-top: 5px;
+    font-family: inherit;
+    height: 30px;
+    font-size: 15px;
+    line-height: 30px;
+}
+
+#registration {
+    display: none;
+}
+
+.signin-form input::-webkit-input-placeholder {
+    color: #BBB;
+}
+.signin-form input:-moz-placeholder {
+    color: #BBB;
+}
+.signin-form input::-moz-placeholder {
+    color: #BBB;
+}
+.signin-form input:-ms-input-placeholder {
+    color: #BBB;
+}
+
 #edit-screen {
     position: absolute;
     top: 0; left: 0; right: 0; bottom: 0;
@@ -434,6 +481,31 @@ body {
             <div id="custom" class="button">Custom</div>
             <div id="rankings" class="button">Rankings</div>
             <div id="how-to" class="button">How To Play</div>
+            <div id="logout" class="button">Logout</div>
+        </div>
+        <div id="signin">
+            <div class="header">
+                SCRIPTATUS
+            </div>
+            <div class="signin-form">
+                <input id="email" placeholder="email"/>
+                <input id="password" type="password" placeholder="password"/>
+                <div id="login" class="button">Login</div>
+                <div id="registration-link">register</div>
+            </div>
+        </div>
+        <div id="registration">
+            <div class="header">
+                SCRIPTATUS
+            </div>
+            <div class="signin-form">
+                <input id="registration-email" placeholder="email"/>
+                <input id="registration-password" type="password" placeholder="password"/>
+                <input id="registration-retype" type="password" placeholder="retype"/>
+
+                <div id="register" class="button">Register</div>
+                <div id="signin-link">login</div>
+            </div>
         </div>
     </div>
     <div id="edit-screen">
@@ -520,6 +592,19 @@ body {
         </div>
     </div>
     <script src="ace-builds/src-min/ace.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/4.1.5/firebase.js"></script>
+    <script>
+      // Initialize Firebase
+      var config = {
+        apiKey: "AIzaSyDtu4MxY3NCgYZT-VZQYJiYv5eNPDo6p6Y",
+        authDomain: "scriptatus.firebaseapp.com",
+        databaseURL: "https://scriptatus.firebaseio.com",
+        projectId: "scriptatus",
+        storageBucket: "gs://scriptatus.appspot.com",
+        messagingSenderId: "286297931348"
+      };
+      firebase.initializeApp(config);
+    </script>
     <script src="build/game.js"></script>
 </body>
 </html>

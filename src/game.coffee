@@ -1044,6 +1044,9 @@ instantiate_character = (template, index, allegiance) ->
 BOARD_HEIGHT = 750
 BOARD_WIDTH = 1500
 
+character_templates = [0, 0, 0, 0]
+enemy_templates = [0, 0, 0, 0]
+
 # MAIN RUNTIME
 play_game = ->
     document.getElementById('main-menu').style.display = 'none'
@@ -1640,25 +1643,28 @@ SHIELD_RATIO = 0.7
 class Script
     constructor: (@name, @class, @ai) ->
 
-if 'scripts' of localStorage
-    SCRIPTS = JSON.parse(localStorage.scripts).map (x) -> new Script x[0], x[1], x[2]
-else
-    SCRIPTS = [
-        new Script('Basic', 'Mage', MAGE_AI),
-        new Script('Basic', 'Knight', KNIGHT_AI),
-        new Script('Basic', 'Archer', ARCHER_AI),
-        new Script('Basic', 'Rogue', ROGUE_AI)
-    ]
+SCRIPTS = [
+    new Script('Basic', 'Mage', MAGE_AI),
+    new Script('Basic', 'Knight', KNIGHT_AI),
+    new Script('Basic', 'Archer', ARCHER_AI),
+    new Script('Basic', 'Rogue', ROGUE_AI)
+]
 
-if 'team' of localStorage
-    character_templates = JSON.parse localStorage.team
-else
-    character_templates = [0, 0, 0, 0]
+database = firebase.database()
 
-if 'practice_opponent' of localStorage
-    enemy_templates = JSON.parse localStorage.practice_opponent
-else
-    enemy_templates = [0, 1, 2, 3]
+# Load scripts from the database once
+load_scripts = ->
+    database.ref("/scripts/#{CURRENT_USER.uid}").once('value').then (snapshot) ->
+       SCRIPTS = snapshot.val().map (x) -> new Script x[0], x[1], x[2]
+       do update_prototype_list
+
+load_settings = ->
+    database.ref("/settings/#{CURRENT_USER.uid}").once('value').then (snapshot) ->
+        val = snapshot.val()
+        character_templates = val?.character_templates ? [0, 0, 0, 0]
+        enemy_templates = val?.enemy_templates ? [0, 0, 0, 0]
+        do rerender_tabs
+        do rerender_enemy_tabs
 
 '''
 ARCHETYPES = {
@@ -1680,6 +1686,27 @@ main_menu = ->
     document.getElementById('edit-screen').style.display = 'none'
     document.getElementById('lose-screen').style.display = 'none'
     document.getElementById('main-menu').style.display = 'block'
+    document.getElementById('signin').style.display = 'none'
+    document.getElementById('registration').style.display = 'none'
+    document.getElementById('main-menu-floater').style.display = 'block'
+
+login_screen = ->
+    document.getElementById('win-screen').style.display = 'none'
+    document.getElementById('edit-screen').style.display = 'none'
+    document.getElementById('lose-screen').style.display = 'none'
+    document.getElementById('main-menu').style.display = 'block'
+    document.getElementById('signin').style.display = 'block'
+    document.getElementById('registration').style.display = 'none'
+    document.getElementById('main-menu-floater').style.display = 'none'
+
+registration_screen = ->
+    document.getElementById('win-screen').style.display = 'none'
+    document.getElementById('edit-screen').style.display = 'none'
+    document.getElementById('lose-screen').style.display = 'none'
+    document.getElementById('main-menu').style.display = 'block'
+    document.getElementById('signin').style.display = 'none'
+    document.getElementById('registration').style.display = 'block'
+    document.getElementById('main-menu-floater').style.display = 'none'
 
 # Edit screen
 edit_element = document.getElementById 'edit-editor'
@@ -1747,7 +1774,8 @@ update_prototype_list = ->
             wrapper.className += ' selected'
             selected_element = wrapper
             character_templates[currently_editing] = i
-            localStorage.team = JSON.stringify character_templates
+
+            save_settings()
 
             ace_editor.setValue SCRIPTS[i].ai, -1
             do rerender_tabs
@@ -1774,18 +1802,30 @@ update_prototype_list = ->
             wrapper.className += ' selected'
             enemy_selected_element = wrapper
             enemy_templates[enemy_currently_editing] = i
-            localStorage.practice_opponent = JSON.stringify enemy_templates
+
+            save_settings()
 
             do rerender_enemy_tabs
 
 do update_prototype_list
 
+database = firebase.database()
 save_timeout = null
 save = ->
     if save_timeout?
         clearTimeout save_timeout
     save_timeout = setTimeout (->
-        localStorage.scripts = JSON.stringify SCRIPTS.map (x) -> [x.name, x.class, x.ai]
+        # Save scripts
+        database.ref("/scripts/#{CURRENT_USER.uid}").set SCRIPTS.map (x) -> [x.name, x.class, x.ai]
+    ), 150
+
+save_settings_timeout = null
+save_settings = ->
+    if save_settings_timeout?
+        clearTimeout save_settings_timeout
+    save_settings_timeout = setTimeout (->
+        # Save scripts
+        database.ref("/settings/#{CURRENT_USER.uid}").set {character_templates, enemy_templates}
     ), 150
 
 ace_editor.on 'change', ->
@@ -1934,11 +1974,42 @@ document.getElementById('delete').addEventListener 'click', ->
     character_templates = character_templates.map (x) -> if x >= contexted_index then x - 1 else x
     enemy_templates = enemy_templates.map (x) -> if x >= contexted_index then x - 1 else x
 
-    localStorage.team = JSON.stringify character_templates
-    localStorage.practice_opponent = JSON.stringify enemy_templates
+    save_settings()
 
     do update_prototype_list
     do rerender_tabs
     do save
 
-main_menu()
+document.getElementById('registration-link').addEventListener 'click', registration_screen
+document.getElementById('signin-link').addEventListener 'click', login_screen
+
+document.getElementById('register').addEventListener 'click', ->
+    email = document.getElementById('registration-email').value
+    password = document.getElementById('registration-password').value
+    retype = document.getElementById('registration-retype').value
+
+    if password is retype
+        firebase.auth().createUserWithEmailAndPassword(email, password).catch (err) ->
+            alert err
+    else
+        alert 'passwords are not the same'
+
+document.getElementById('login').addEventListener 'click', ->
+    email = document.getElementById('email').value
+    password = document.getElementById('password').value
+
+    firebase.auth().signInWithEmailAndPassword(email, password).catch (err) ->
+        alert err
+
+document.getElementById('logout').addEventListener 'click', ->
+    firebase.auth().signOut()
+
+CURRENT_USER = null
+firebase.auth().onAuthStateChanged (user) ->
+    if user
+        CURRENT_USER = user
+        load_scripts()
+        load_settings()
+        main_menu()
+    else
+        login_screen()
