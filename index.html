@@ -1,7 +1,8 @@
 <html>
 <head>
     <!--<link href="https://fonts.googleapis.com/css?family=MedievalSharp" rel="stylesheet">-->
-<link href="https://fonts.googleapis.com/css?family=Uncial+Antiqua" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css?family=Uncial+Antiqua" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet"/>
 
 <style>
 body {
@@ -45,6 +46,10 @@ body {
     border: 1px solid #000;
     outline: none;
     color: #FF0;
+}
+#menu-items {
+    padding-right: 5px;
+    padding-left: 5px;
 }
 #buttons {
     position: absolute;
@@ -207,7 +212,7 @@ body {
 #registration-link, #signin-link {
     color: #00F;
     text-decoration: underline;
-    font-size: 12px;
+    /*font-size: 12px;*/
     text-align: center;
     cursor: pointer;
 }
@@ -408,6 +413,10 @@ body {
     margin: 5px;
     cursor: pointer;
 }
+#login, #register {
+    margin-left: 0px;
+    margin-right: 0px;
+}
 .selected, .contexted {
     background: #888 /*rgba(128, 128, 128, 0.5);*/
 }
@@ -434,6 +443,32 @@ body {
     font-size: 10px;
     text-align: center;
     z-index: 9999;
+}
+#providers {
+    margin-top: 5px;
+}
+.provider {
+    display: inline-block;
+    font-family: 'Roboto', sans-serif;
+    background-color: #FFF;
+    border-radius: 2px;
+    padding: 2px;
+    height: 20px;
+    line-height: 20px;
+}
+#google-in {
+    background-image: url("google-logo.png");
+    background-size: 20px 20px;
+    background-position: 2px 2px;
+    padding-left: 25px;
+    background-repeat: no-repeat;
+}
+#github-in {
+    background-image: url("github-logo.png");
+    background-size: 20px 20px;
+    background-position: 2px 2px;
+    padding-left: 25px;
+    background-repeat: no-repeat;
 }
 </style>
 </head>
@@ -476,12 +511,14 @@ body {
             <div class="header">
                 SCRIPTATUS
             </div>
-            <div id="practice" class="button">Practice</div>
-            <div id="random" class="button">Random</div>
-            <div id="custom" class="button">Custom</div>
-            <div id="rankings" class="button">Rankings</div>
-            <div id="how-to" class="button">How To Play</div>
-            <div id="logout" class="button">Logout</div>
+            <div id="menu-items">
+                <div id="practice" class="button">Practice</div>
+                <div id="random" class="button">Random</div>
+                <div id="custom" class="button">Custom</div>
+                <div id="rankings" class="button">Rankings</div>
+                <div id="how-to" class="button">How To Play</div>
+                <div id="logout" class="button">Logout</div>
+            </div>
         </div>
         <div id="signin">
             <div class="header">
@@ -492,6 +529,11 @@ body {
                 <input id="password" type="password" placeholder="password"/>
                 <div id="login" class="button">Login</div>
                 <div id="registration-link">register</div>
+                <div id="providers" style="text-align:center;">
+                    Or log in with:<br/>
+                    <div class="provider" id="google-in" style="height:20px; width: 50px; cursor:pointer;">Google</div>
+                    <div class="provider" id="github-in" style="height:20px; width: 50px; cursor:pointer;">Github</div>
+                </div>
             </div>
         </div>
         <div id="registration">

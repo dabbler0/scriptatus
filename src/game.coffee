@@ -2001,6 +2001,16 @@ document.getElementById('login').addEventListener 'click', ->
     firebase.auth().signInWithEmailAndPassword(email, password).catch (err) ->
         alert err
 
+github_provider = new firebase.auth.GithubAuthProvider()
+document.getElementById('github-in').addEventListener 'click', ->
+    firebase.auth().signInWithPopup(github_provider).catch (err) ->
+        alert err
+
+google_provider = new firebase.auth.GoogleAuthProvider()
+document.getElementById('google-in').addEventListener 'click', ->
+    firebase.auth().signInWithPopup(google_provider).catch (err) ->
+        alert err
+
 document.getElementById('logout').addEventListener 'click', ->
     firebase.auth().signOut()
 
