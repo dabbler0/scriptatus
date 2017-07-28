@@ -1047,10 +1047,28 @@ BOARD_WIDTH = 1500
 character_templates = [0, 0, 0, 0]
 enemy_templates = [0, 0, 0, 0]
 
+keysdown = {}
+
+document.body.addEventListener 'keydown', (event) ->
+    keysdown[event.which] = true
+
+document.body.addEventListener 'keyup', (event) ->
+    keysdown[event.which] = false
+
 # MAIN RUNTIME
-play_game = ->
+play_game = (enemy_name, enemies) ->
+    document.getElementById('play-screen').style.display = 'block'
     document.getElementById('main-menu').style.display = 'none'
     document.getElementById('edit-screen').style.display = 'none'
+
+    document.getElementById('other-name').innerText = generate_name enemy_name
+    document.getElementById('self-name').innerText = generate_name CURRENT_USER.uid
+
+    for i in [0...4]
+        document.getElementById("self-#{i + 1}").style.backgroundImage =
+            "url(#{IMAGE_URLS[SCRIPTS[character_templates[i]].class]})"
+        document.getElementById("other-#{i + 1}").style.backgroundImage =
+            "url(evil-#{IMAGE_URLS[enemies[i].type_string]})"
 
     canvas = document.getElementById 'viewport'
     ctx = canvas.getContext '2d'
@@ -1091,9 +1109,12 @@ play_game = ->
     tile_height = canvas.height / 20
 
     characters = character_templates.map (x, i) -> instantiate_character SCRIPTS[x], i, true
+    characters = characters.concat enemies
 
-    # Enemies
-    characters = characters.concat enemy_templates.map (x, i) -> instantiate_character SCRIPTS[x], i, false
+    # Display countdown covering
+    countdown_covering = document.getElementById('countdown-screen')
+    countdown_number = document.getElementById('countdown-number')
+    countdown_covering.style.display = 'block'
 
     should_continue_tick = true
 
@@ -1129,40 +1150,50 @@ play_game = ->
 
     spells = characters.filter((x) -> x instanceof Mage).map((x) -> x.spell)
 
+    char_listeners = []
+
     for i in [1..4] then do (i) ->
-        document.getElementById("char-#{i}").addEventListener 'click', ->
+        document.getElementById("char-#{i}").addEventListener 'click', char_listeners[i] = ->
             if main_character
                 main_character.player_controlled = false
             main_character = characters[i - 1]
             main_character.player_controlled = true
 
-    document.getElementById('spectate').addEventListener 'click', ->
+            rerender_ingame_selects()
+
+    document.getElementById('spectate').addEventListener 'click', spectate_listener = ->
         if main_character
             main_character.player_controlled = false
         main_character = null
 
-    document.getElementById('quit').addEventListener 'click', ->
+    document.getElementById('quit').addEventListener 'click', quit_listener = ->
         should_continue_tick = false
+        terminate()
         do lose_screen
 
-    desired_pos = new Vector(0, 0)
+    desired_pos = new Vector(canvas.width / 2, canvas.height / 2)
 
-    canvas.addEventListener 'mousemove', (event) ->
+    canvas.addEventListener 'mousemove', mousemove_listener = (event) ->
         desired_pos = new Vector event.offsetX, event.offsetY
-
-    keysdown = {}
-
-    document.body.addEventListener 'keydown', (event) ->
-        keysdown[event.which] = true
-
-    document.body.addEventListener 'keyup', (event) ->
-        keysdown[event.which] = false
 
     moving_target = null
 
     canvas.oncontextmenu = (e) -> e.preventDefault(); return false
 
-    canvas.addEventListener 'mousedown', (event) ->
+    # Do one render pass
+    # Draw the board
+    ctx.fillStyle = dirt_asset #'#faa460'
+    ctx.fillRect 0, 0, BOARD_WIDTH, BOARD_HEIGHT
+
+    for spot in grass_spots
+        ctx.drawImage grass_asset, spot.x, spot.y
+
+    # Draw the stuffs on the board
+    entities = characters.concat(walls).sort (a, b) -> if a.pos.y > b.pos.y then return 1 else return -1
+    for entity in entities when (not entity.health?) or entity.health > 0
+        entity.render render_context
+
+    canvas.addEventListener 'mousedown', mousedown_handler = (event) ->
         if event.which is 3
             moving_target = new Vector(event.offsetX, event.offsetY).minus(translate_vector)
             event.preventDefault()
@@ -1177,7 +1208,7 @@ play_game = ->
         else if main_character instanceof Mage
             main_character.cast new Vector(event.offsetX, event.offsetY).minus(translate_vector)
 
-    document.body.addEventListener 'mouseup', (event) ->
+    document.body.addEventListener 'mouseup', mouseup_handler = (event) ->
         if main_character instanceof Archer
             result = main_character.loose()
             if result then bullets.push result
@@ -1186,23 +1217,25 @@ play_game = ->
         else if main_character instanceof Mage
             main_character.cancel_casting()
 
+    # Remove all event handlers
+    terminate = ->
+        canvas.removeEventListener 'mousedown', mousedown_handler
+        canvas.removeEventListener 'mouseup', mouseup_handler
+
+        for i in [1..4] then do (i) ->
+            document.getElementById("char-#{i}").removeEventListener 'click', char_listeners[i]
+
+        document.getElementById('spectate').removeEventListener 'click', spectate_listener
+        document.getElementById('quit').removeEventListener 'click', quit_listener
+
+
     contexts = [1..4].map (i) ->
         small_canvas = document.getElementById("canvas-#{i}")
         small_ctx = small_canvas.getContext '2d'
 
         return new RenderContext small_canvas, small_ctx
 
-    tick = ->
-        # Move the camera
-        if desired_pos.x < 50
-            translate_vector.x += Math.sqrt(50 - desired_pos.x)
-        if desired_pos.x > canvas.width - 50
-            translate_vector.x -= Math.sqrt(desired_pos.x - (canvas.width - 50))
-        if desired_pos.y < 50
-            translate_vector.y += Math.sqrt(50 - desired_pos.y)
-        if desired_pos.y > canvas.height - 50
-            translate_vector.y -= Math.sqrt(desired_pos.y - (canvas.height - 50))
-
+    rerender_ingame_selects = ->
         for context, i in contexts
             context.ctx.resetTransform()
             context.ctx.clearRect 0, 0, context.canvas.width, context.canvas.height
@@ -1214,161 +1247,189 @@ play_game = ->
 
             characters[i].render context
 
-        # Edges
-        translate_vector.x = -Math.max -50, Math.min BOARD_WIDTH + 50 - canvas.width, -translate_vector.x
-        translate_vector.y = -Math.max -50, Math.min BOARD_HEIGHT + 50 - canvas.height, -translate_vector.y
+    do rerender_ingame_selects
 
-        # Check win condition
-        if characters.filter((x) -> x.health > 0 and x.allegiance).length == 0
-            characters.forEach (x) -> x.ai_runner.terminate()
-            return lose_screen()
-        else if characters.filter((x) -> x.health > 0 and not x.allegiance).length == 0
-            characters.forEach (x) -> x.ai_runner.terminate()
-            return win_screen()
-        else if should_continue_tick
-            setTimeout tick, 1000 / FRAME_RATE
+    # Countdown to the start of the game
+    countdown = (secs) ->
+        if secs > 0
+            countdown_number.innerText = secs.toString()
+            setTimeout (-> countdown secs - 1), 1000
+            return
 
-        ctx.resetTransform()
+        countdown_covering.style.display = 'none'
 
-        ctx.clearRect 0, 0, canvas.width, canvas.height
+        tick = ->
+            # Move the camera
+            if desired_pos.x < 50
+                translate_vector.x += Math.sqrt(50 - desired_pos.x)
+            if desired_pos.x > canvas.width - 50
+                translate_vector.x -= Math.sqrt(desired_pos.x - (canvas.width - 50))
+            if desired_pos.y < 50
+                translate_vector.y += Math.sqrt(50 - desired_pos.y)
+            if desired_pos.y > canvas.height - 50
+                translate_vector.y -= Math.sqrt(desired_pos.y - (canvas.height - 50))
 
-        if main_character
-            desired_dir = desired_pos.minus(translate_vector)
-                .minus(main_character.pos.minus(new Vector(0, main_character.height))).dir()
+            do rerender_ingame_selects
 
-            normalized_delta = wrap_angle(desired_dir - main_character.dir)
-            main_character.angular_dir = 10 * normalized_delta / Math.PI
+            # Edges
+            translate_vector.x = -Math.max -50, Math.min BOARD_WIDTH + 50 - canvas.width, -translate_vector.x
+            translate_vector.y = -Math.max -50, Math.min BOARD_HEIGHT + 50 - canvas.height, -translate_vector.y
 
-            prototype_vector = new Vector(0, 0)
-            main_character.moving = false
+            # Check win condition
+            if characters.filter((x) -> x.health > 0 and x.allegiance).length == 0
+                characters.forEach (x) -> x.ai_runner.terminate()
+                terminate()
+                return lose_screen()
+            else if characters.filter((x) -> x.health > 0 and not x.allegiance).length == 0
+                characters.forEach (x) -> x.ai_runner.terminate()
+                terminate()
+                return win_screen()
+            else if should_continue_tick
+                setTimeout tick, 1000 / FRAME_RATE
 
-            if keysdown[key_codes.w]
-                main_character.moving = true
-                prototype_vector.y -= 1
-            if keysdown[key_codes.s]
-                main_character.moving = true
-                prototype_vector.y += 1
-            if keysdown[key_codes.a]
-                main_character.moving = true
-                prototype_vector.x -= 1
-            if keysdown[key_codes.d]
-                main_character.moving = true
-                prototype_vector.x += 1
+            ctx.resetTransform()
 
-            if main_character.moving
-                main_character.movement_dir = prototype_vector.dir()
+            ctx.clearRect 0, 0, canvas.width, canvas.height
 
-        ctx.translate(translate_vector.x, translate_vector.y)
+            if main_character
+                desired_dir = desired_pos.minus(translate_vector)
+                    .minus(main_character.pos.minus(new Vector(0, main_character.height))).dir()
 
-        # Draw the board
-        ctx.fillStyle = dirt_asset #'#faa460'
-        ctx.fillRect 0, 0, BOARD_WIDTH, BOARD_HEIGHT
+                normalized_delta = wrap_angle(desired_dir - main_character.dir)
+                main_character.angular_dir = 10 * normalized_delta / Math.PI
 
-        for spot in grass_spots
-            ctx.drawImage grass_asset, spot.x, spot.y
+                prototype_vector = new Vector(0, 0)
+                main_character.moving = false
 
-        for spell in spells
-            spell.tick()
-            spell.render render_context
+                if keysdown[key_codes.w]
+                    main_character.moving = true
+                    prototype_vector.y -= 1
+                if keysdown[key_codes.s]
+                    main_character.moving = true
+                    prototype_vector.y += 1
+                if keysdown[key_codes.a]
+                    main_character.moving = true
+                    prototype_vector.x -= 1
+                if keysdown[key_codes.d]
+                    main_character.moving = true
+                    prototype_vector.x += 1
 
-        for character in characters when character.health > 0
-            # Detect spell intersection.
-            # Spells do damage every frame.
+                if main_character.moving
+                    main_character.movement_dir = prototype_vector.dir()
+
+            ctx.translate(translate_vector.x, translate_vector.y)
+
+            # Draw the board
+            ctx.fillStyle = dirt_asset #'#faa460'
+            ctx.fillRect 0, 0, BOARD_WIDTH, BOARD_HEIGHT
+
+            for spot in grass_spots
+                ctx.drawImage grass_asset, spot.x, spot.y
+
             for spell in spells
-                if spell.alive and spell.burning and character.pos.minus(spell.pos).magnitude() < SPELL_RADIUS
-                    character.damage 1
+                spell.tick()
+                spell.render render_context
 
-            # Detect character intersection for knights
-            if character.striking_sideways
-                for target in characters when target isnt character and character.health > 0
-                    if character.pos.minus(target.pos).magnitude() < character.radius * 4 + target.radius and
-                            Math.abs(wrap_angle(target.pos.minus(character.pos).dir() - character.dir)) < Math.PI / 2
-                        target.damage 3
-
-            result = character.tick {characters, walls, spells, bullets}
-
-            # Detect edge intersection
-            if character.pos.x < character.hitbox_radius then character.pos.x = character.hitbox_radius
-            if character.pos.x > BOARD_WIDTH - character.hitbox_radius then character.pos.x = BOARD_WIDTH - character.hitbox_radius
-
-            if character.pos.y < character.hitbox_radius then character.pos.y = character.hitbox_radius
-            if character.pos.y > BOARD_HEIGHT - character.hitbox_radius then character.pos.y = BOARD_HEIGHT - character.hitbox_radius
-
-            # Detect wall intersection
-            for wall in walls
-                # Running into a wall; we have a problem
-                if wall.pos.x < character.pos.x + character.hitbox_radius and
-                        character.pos.x - character.hitbox_radius < wall.pos.x + wall.width and
-                        wall.pos.y < character.pos.y + character.hitbox_radius and
-                        character.pos.y - character.hitbox_radius < wall.pos.y + wall.height
-
-                    # Pop us to one side of the rectangle
-                    bottom_intersect = new Vector(
-                        character.pos.x,
-                        wall.pos.y + wall.height + character.hitbox_radius
-                    )
-                    top_intersect = new Vector(
-                        character.pos.x,
-                        wall.pos.y - character.hitbox_radius
-                    )
-                    right_intersect = new Vector(
-                        wall.pos.x + wall.width + character.hitbox_radius,
-                        character.pos.y
-                    )
-                    left_intersect = new Vector(
-                        wall.pos.x - character.hitbox_radius,
-                        character.pos.y
-                    )
-
-                    # Find the closest one and send us there.
-                    distances = [bottom_intersect, top_intersect, right_intersect, left_intersect].map (p) ->
-                        p.minus(character.pos).magnitude()
-
-                    min_dist = Math.min.apply window, distances
-
-                    if min_dist is distances[0]
-                        character.pos.copy bottom_intersect
-                        continue
-                    if min_dist is distances[1]
-                        character.pos.copy top_intersect
-                        continue
-                    if min_dist is distances[2]
-                        character.pos.copy right_intersect
-                        continue
-                    if min_dist is distances[3]
-                        character.pos.copy left_intersect
-                        continue
-
-            if result
-                bullets.push result
-
-        entities = characters.concat(walls).sort (a, b) -> if a.pos.y > b.pos.y then return 1 else return -1
-        for entity in entities when (not entity.health?) or entity.health > 0
-            entity.render render_context
-
-        new_bullets = []
-        for bullet in bullets
-            bullet.tick()
-            bullet.render render_context
-
-            # Detect character intersection
             for character in characters when character.health > 0
-                if bullet.pos.minus(character.pos).magnitude() < character.hitbox_radius
-                    character.damage bullet.damage
-                    bullet.alive = false
-                    continue
+                # Detect spell intersection.
+                # Spells do damage every frame.
+                for spell in spells
+                    if spell.alive and spell.burning and character.pos.minus(spell.pos).magnitude() < SPELL_RADIUS
+                        character.damage 1
 
-            for wall in walls
-                if wall.pos.x < bullet.pos.x < wall.pos.x + wall.width and wall.pos.y < bullet.pos.y < wall.pos.y + wall.height
-                    bullet.alive = false
-                    continue
+                # Detect character intersection for knights
+                if character.striking_sideways
+                    for target in characters when target isnt character and character.health > 0
+                        if character.pos.minus(target.pos).magnitude() < character.radius * 4 + target.radius and
+                                Math.abs(wrap_angle(target.pos.minus(character.pos).dir() - character.dir)) < Math.PI / 2
+                            target.damage 3
 
-            if bullet.alive
-                new_bullets.push bullet
+                result = character.tick {characters, walls, spells, bullets}
 
-        bullets = new_bullets
+                # Detect edge intersection
+                if character.pos.x < character.hitbox_radius then character.pos.x = character.hitbox_radius
+                if character.pos.x > BOARD_WIDTH - character.hitbox_radius then character.pos.x = BOARD_WIDTH - character.hitbox_radius
 
-    tick()
+                if character.pos.y < character.hitbox_radius then character.pos.y = character.hitbox_radius
+                if character.pos.y > BOARD_HEIGHT - character.hitbox_radius then character.pos.y = BOARD_HEIGHT - character.hitbox_radius
+
+                # Detect wall intersection
+                for wall in walls
+                    # Running into a wall; we have a problem
+                    if wall.pos.x < character.pos.x + character.hitbox_radius and
+                            character.pos.x - character.hitbox_radius < wall.pos.x + wall.width and
+                            wall.pos.y < character.pos.y + character.hitbox_radius and
+                            character.pos.y - character.hitbox_radius < wall.pos.y + wall.height
+
+                        # Pop us to one side of the rectangle
+                        bottom_intersect = new Vector(
+                            character.pos.x,
+                            wall.pos.y + wall.height + character.hitbox_radius
+                        )
+                        top_intersect = new Vector(
+                            character.pos.x,
+                            wall.pos.y - character.hitbox_radius
+                        )
+                        right_intersect = new Vector(
+                            wall.pos.x + wall.width + character.hitbox_radius,
+                            character.pos.y
+                        )
+                        left_intersect = new Vector(
+                            wall.pos.x - character.hitbox_radius,
+                            character.pos.y
+                        )
+
+                        # Find the closest one and send us there.
+                        distances = [bottom_intersect, top_intersect, right_intersect, left_intersect].map (p) ->
+                            p.minus(character.pos).magnitude()
+
+                        min_dist = Math.min.apply window, distances
+
+                        if min_dist is distances[0]
+                            character.pos.copy bottom_intersect
+                            continue
+                        if min_dist is distances[1]
+                            character.pos.copy top_intersect
+                            continue
+                        if min_dist is distances[2]
+                            character.pos.copy right_intersect
+                            continue
+                        if min_dist is distances[3]
+                            character.pos.copy left_intersect
+                            continue
+
+                if result
+                    bullets.push result
+
+            entities = characters.concat(walls).sort (a, b) -> if a.pos.y > b.pos.y then return 1 else return -1
+            for entity in entities when (not entity.health?) or entity.health > 0
+                entity.render render_context
+
+            new_bullets = []
+            for bullet in bullets
+                bullet.tick()
+                bullet.render render_context
+
+                # Detect character intersection
+                for character in characters when character.health > 0
+                    if bullet.pos.minus(character.pos).magnitude() < character.hitbox_radius
+                        character.damage bullet.damage
+                        bullet.alive = false
+                        continue
+
+                for wall in walls
+                    if wall.pos.x < bullet.pos.x < wall.pos.x + wall.width and wall.pos.y < bullet.pos.y < wall.pos.y + wall.height
+                        bullet.alive = false
+                        continue
+
+                if bullet.alive
+                    new_bullets.push bullet
+
+            bullets = new_bullets
+
+        tick()
+
+    countdown 3
 
 create_ai_from_template = (program) ->
     return """
@@ -1682,6 +1743,7 @@ lose_screen = ->
     document.getElementById('lose-screen').style.display = 'block'
 
 main_menu = ->
+    document.getElementById('play-screen').style.display = 'none'
     document.getElementById('win-screen').style.display = 'none'
     document.getElementById('edit-screen').style.display = 'none'
     document.getElementById('lose-screen').style.display = 'none'
@@ -1691,6 +1753,7 @@ main_menu = ->
     document.getElementById('main-menu-floater').style.display = 'block'
 
 login_screen = ->
+    document.getElementById('play-screen').style.display = 'none'
     document.getElementById('win-screen').style.display = 'none'
     document.getElementById('edit-screen').style.display = 'none'
     document.getElementById('lose-screen').style.display = 'none'
@@ -1700,6 +1763,7 @@ login_screen = ->
     document.getElementById('main-menu-floater').style.display = 'none'
 
 registration_screen = ->
+    document.getElementById('play-screen').style.display = 'none'
     document.getElementById('win-screen').style.display = 'none'
     document.getElementById('edit-screen').style.display = 'none'
     document.getElementById('lose-screen').style.display = 'none'
@@ -1832,8 +1896,22 @@ ace_editor.on 'change', ->
     SCRIPTS[character_templates[currently_editing]].ai = ace_editor.getValue()
     do save
 
+CURRENT_MODE = 'PRACTICE'
+
 edit_screen = (from) ->
+    CURRENT_MODE = from
+
     document.getElementById('edit-screen-header').innerText = from
+    if from is 'PRACTICE'
+        document.getElementById('edit-choose-enemy').style.display = 'block'
+    else
+        document.getElementById('edit-choose-enemy').style.display = 'none'
+
+    if from is 'CUSTOM'
+        document.getElementById('begin').innerText = 'CHOOSE ENEMY'
+    else
+        document.getElementById('begin').innerText = 'BEGIN'
+
     document.getElementById('win-screen').style.display = 'none'
     document.getElementById('edit-screen').style.display = 'block'
     document.getElementById('lose-screen').style.display = 'none'
@@ -1846,6 +1924,10 @@ IMAGE_URLS = {
     'Knight': 'knight-prototype.png'
     'Rogue': 'rogue-prototype.png'
     'Archer': 'archer-prototype.png'
+    'mage': 'mage-prototype.png'
+    'knight': 'knight-prototype.png'
+    'rogue': 'rogue-prototype.png'
+    'archer': 'archer-prototype.png'
 }
 
 rerender_tabs = ->
@@ -1911,7 +1993,32 @@ document.getElementById('main-menu-lose').addEventListener 'click', main_menu
 document.getElementById('practice').addEventListener 'click', -> edit_screen 'PRACTICE'
 document.getElementById('random').addEventListener 'click', -> edit_screen 'RANDOM'
 document.getElementById('custom').addEventListener 'click', -> edit_screen 'CUSTOM'
-document.getElementById('begin').addEventListener 'click', play_game
+document.getElementById('begin').addEventListener 'click', ->
+    if CURRENT_MODE is 'PRACTICE'
+        play_game CURRENT_USER.uid, enemy_templates.map (x, i) -> instantiate_character SCRIPTS[x], i, false
+
+
+    else if CURRENT_MODE is 'RANDOM'
+        database.ref('/settings').once('value').then (e) ->
+            settings = e.val()
+
+            # Pick a random settings
+            candidates = []
+            for key of settings when key isnt CURRENT_USER.uid
+                candidates.push key
+
+            chosen_opponent = candidates[Math.floor Math.random() * candidates.length]
+
+            database.ref("/scripts/#{chosen_opponent}").once('value').then (script_snapshot) ->
+                enemy_scripts = script_snapshot.val().map (x) -> new Script x[0], x[1], x[2]
+
+                play_game chosen_opponent, settings[chosen_opponent].character_templates.map (x, i) ->
+                    console.log enemy_scripts[x], i
+                    instantiate_character enemy_scripts[x], i, false
+    else
+        alert 'oops I do not know how to do that'
+        return
+
 document.getElementById('back').addEventListener 'click', main_menu
 
 class_elements = {
@@ -2023,3 +2130,69 @@ firebase.auth().onAuthStateChanged (user) ->
         main_menu()
     else
         login_screen()
+
+# NAME GENERATION
+name_syllables = [
+    'tal',
+    'til',
+    'tol',
+    'al',
+    'par',
+    'in',
+    'kron'
+    'kor',
+    'kar',
+    'kur',
+    'kir',
+    'ker',
+    'tar',
+    'ter',
+    'tir',
+    'tur',
+    'tor'
+    'el',
+    'lan',
+    'star',
+    'pril',
+    'por',
+    'par',
+    'pir'
+    'pyl',
+    'pros',
+    'gyr'
+    'xel'
+    'tril'
+    'tris'
+    'fel'
+    'fer'
+    'fen'
+    'fin'
+]
+
+ending_syllables = [
+    'eon',
+    'on',
+    'ea',
+    'ae',
+    'a',
+    'us',
+    'eus',
+    'ius'
+    'is',
+    'os',
+    'ys'
+]
+
+generate_name = (seed) ->
+    rng = new Math.seedrandom seed
+
+    # Name is 2-4 syllables. One of them is the ending one.
+    length = Math.floor rng() * 4
+
+    str = ''
+    for [1..length]
+        str += name_syllables[Math.floor rng() * name_syllables.length]
+    str += ending_syllables[Math.floor rng() * ending_syllables.length]
+
+    str = str[0].toUpperCase() + str[1..]
+    return str

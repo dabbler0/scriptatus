@@ -22,6 +22,8 @@ body {
     margin-left: -100px;
     top: 50%;
     margin-top: -150px;
+    user-drag: none;
+    -webkit-user-drag: none;
 }
 #sword {
     left: 16.6%;
@@ -129,6 +131,13 @@ body {
     padding: 0px;
     display: inline-block;
     cursor: pointer;
+    z-index: 901;
+}
+#buttons, #play-screen {
+    z-index: 901;
+}
+#play-screen {
+    display: none;
 }
 .screen {
     z-index: 999;
@@ -142,6 +151,9 @@ body {
     height: 100%;
     display: none;
     color: #FFF;
+}
+#countdown-screen {
+    z-index: 900;
 }
 #main-menu, #edit-screen {
     background-image: url("wood.png")
@@ -179,7 +191,49 @@ body {
     left: 200px;
     cursor: pointer;
 }
-
+#self {
+    position: absolute;
+    text-align: center;
+    bottom: 50%;
+    left: 0; right: 0;
+    margin-bottom: 30px;
+}
+#other {
+    position: absolute;
+    text-align: center;
+    top: 50%;
+    left: 0; right: 0;
+    margin-top: 30px;
+}
+#self-army {
+    display: inline-block;
+    width: 250px;
+    height: 50px;
+}
+#self-army div {
+    display: inline-block;
+    width: 50px;
+    height: 50px;
+}
+#other-army {
+    display: inline-block;
+    width: 250px;
+    height: 50px;
+}
+#other-army div {
+    display: inline-block;
+    width: 50px;
+    height: 50px;
+}
+#countdown-number {
+    position: absolute;
+    text-align: center;
+    height: 30px;
+    font-size: 30px;
+    top: 50%;
+    left: 0; right: 0;
+    margin-top: -15px;
+}
 #win-screen-floater, #lose-screen-floater, #dialog-screen-floater {
     position: absolute;
     width: 300px;
@@ -293,8 +347,24 @@ body {
 #edit-screen-footer {
     width: 100%;
     position: absolute;
-    left: 0; right:0; bottom: 0;
+    left: 0; right: 0; bottom: 0;
     height: 45px;
+}
+#back {
+    position: absolute;
+    right: 50%;
+    margin-right: 5px;
+    left: 5px;
+    top: 5px;
+    bottom: 5px;
+}
+#begin {
+    position: absolute;
+    left: 50%;
+    margin-left: 5px;
+    right: 5px;
+    top: 5px;
+    bottom: 5px;
 }
 #edit-screen-header {
     width: 100%;
@@ -479,14 +549,39 @@ body {
     <img id="stone-asset" src="stone.png" style="display: none;"/>
     <img id="stone-top-asset" src="stone-top.png" style="display: none;"/>
     <img id="grass-asset" src="grass.png" style="display: none;"/>
-    <canvas id="viewport" style="width: 100%; height: 100%; position: absolute; top: 0px; left: 0px; right: 0px; bottom: 0px; background: #000;"></canvas>
-    <div id="buttons">
-        <div id="char-1"><canvas id="canvas-1" height=50 width=50></canvas></div>
-        <div id="char-2"><canvas id="canvas-2" height=50 width=50></canvas></div>
-        <div id="char-3"><canvas id="canvas-3" height=50 width=50></canvas></div>
-        <div id="char-4"><canvas id="canvas-4" height=50 width=50></canvas></div>
-        <div id="spectate"><canvas id="spectate-canvas" height=50 width=50></canvas></div>
-        <div id="quit"><canvas id="quit-canvas" height=50 width=50></canvas></div>
+    <div id="play-screen">
+        <canvas id="viewport" style="width: 100%; height: 100%; position: absolute; top: 0px; left: 0px; right: 0px; bottom: 0px; background: #000;"></canvas>
+        <div id="buttons">
+            <div id="char-1"><canvas id="canvas-1" height=50 width=50></canvas></div>
+            <div id="char-2"><canvas id="canvas-2" height=50 width=50></canvas></div>
+            <div id="char-3"><canvas id="canvas-3" height=50 width=50></canvas></div>
+            <div id="char-4"><canvas id="canvas-4" height=50 width=50></canvas></div>
+            <div id="spectate"><canvas id="spectate-canvas" height=50 width=50></canvas></div>
+            <div id="quit"><canvas id="quit-canvas" height=50 width=50></canvas></div>
+        </div>
+    </div>
+    <div id="countdown-screen" class="screen">
+        <div id="self">
+            <div id="self-name"></div>
+            <div id="self-army">
+                <div id="self-1"></div>
+                <div id="self-2"></div>
+                <div id="self-3"></div>
+                <div id="self-4"></div>
+            </div>
+        </div>
+        <div id="countdown-number">
+            3
+        </div>
+        <div id="other">
+            <div id="other-name"></div>
+            <div id="other-army">
+                <div id="other-1"></div>
+                <div id="other-2"></div>
+                <div id="other-3"></div>
+                <div id="other-4"></div>
+            </div>
+        </div>
     </div>
     <div id="win-screen" class="screen">
         <div id="win-screen-floater">
@@ -564,16 +659,12 @@ body {
                         VS.
                     </div>
                     <div id="enemy-tab-1" class="enemy-tab selected-tab">
-                        <canvas id="enemy-canvas-1"></canvas>
                     </div>
                     <div id="enemy-tab-2" class="enemy-tab">
-                        <canvas id="enemy-canvas-2"></canvas>
                     </div>
                     <div id="enemy-tab-3" class="enemy-tab">
-                        <canvas id="enemy-canvas-3"></canvas>
                     </div>
                     <div id="enemy-tab-4" class="enemy-tab">
-                        <canvas id="enemy-canvas-4"></canvas>
                     </div>
                 </div>
                 <div id="enemy-prototype-list">
@@ -599,12 +690,9 @@ body {
                     <div id="edit-editor"></div>
                 </div>
             </div>
-            <table id="edit-screen-footer">
-                <tr><td>
-                    <div id="back" class="button">BACK</div>
-                </td><td>
-                    <div id="begin" class="button">BEGIN</div>
-                </td>
+            <div id="edit-screen-footer">
+                <div id="back" class="button">BACK</div>
+                <div id="begin" class="button">BEGIN</div>
             </table>
         </div>
     </div>
@@ -648,6 +736,8 @@ body {
         messagingSenderId: "286297931348"
       };
       firebase.initializeApp(config);
+    </script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/seedrandom/2.4.3/seedrandom.min.js">
     </script>
     <script src="build/game.js"></script>
 </body>
