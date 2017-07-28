@@ -1546,15 +1546,36 @@ create_ai_from_template = (program) ->
         return closest;
     }
 
+    var _characters, _bullets, _spells, _walls, _enemies, _allies;
+
+    function characters() {
+        return _characters;
+    }
+    function bullets() {
+        return _bullets;
+    }
+    function walls() {
+        return _walls;
+    }
+    function spells() {
+        return _spells;
+    }
+    function enemies() {
+        return _enemies;
+    }
+    function allies() {
+        return _allies;
+    }
+
     onmessage = function(e) {
         var info = e.data;
-        var characters = info.characters.map(unpack),
-            bullets = info.bullets.map(unpack),
-            spells = info.spells.map(unpack),
-            walls = info.walls.map(unpack);
+        _characters = info.characters.map(unpack);
+        _bullets = info.bullets.map(unpack);
+        _spells = info.spells.map(unpack);
+        _walls = info.walls.map(unpack);
 
-        var enemies = characters.filter(function(x) { return !x.allegiance; });
-        var allies = characters.filter(function(x) { return x.allegiance; });
+        _enemies = _characters.filter(function(x) { return !x.allegiance; });
+        _allies = _characters.filter(function(x) { return x.allegiance; });
 
         me = unpack(info.main_character);
 
@@ -1574,23 +1595,15 @@ DUMBO = '''
 '''
 
 ROGUE_AI = '''
-    /*
-     * A basic Rogue AI that chases the nearest enemy.
-     *
-     * Improve on this to win more games!
-     */
-    var target = closest_among(enemies);
+    // Basic Rogue AI; chases and shoots at enemies.
+    var target = closest_among(enemies());
     turn_toward(target);
     move_toward(target);
     start_shooting();'''
 
 KNIGHT_AI = '''
-    /*
-     * A basic Knight AI that chases the nearest enemy.
-     *
-     * Improve on this to win more games!
-     */
-    var target = closest_among(enemies);
+    // Basic Knight AI; chases and hits enemies.
+    var target = closest_among(enemies());
     turn_toward(target);
     move_toward(target);
     if (me.distance(target) <= 55) {
@@ -1598,21 +1611,13 @@ KNIGHT_AI = '''
     }'''
 
 MAGE_AI = '''
-    /*
-     * A basic Mage AI that casts spells at the nearest enemy.
-     *
-     * Improve on this to win more games!
-     */
-    var target = closest_among(enemies);
+    // Basic Rogue AI; casts spells at enemies.
+    var target = closest_among(enemies());
     cast(target.pos);'''
 
 ARCHER_AI = '''
-    /*
-     * A basic Archer AI that flees and shoots arrows at the nearest enemy.
-     *
-     * Improve on this to win more games!
-     */
-    var target = closest_among(enemies);
+    // Basic Archer AI; shoots at enemies.
+    var target = closest_among(enemies());
     turn_toward(target);
     if (me.ready_to_shoot) {
         loose();
@@ -1731,8 +1736,330 @@ registration_screen = ->
 # Edit screen
 edit_element = document.getElementById 'edit-editor'
 edit_element.oncontextmenu = (event) -> event.stopPropagation()
-ace_editor = ace.edit edit_element
-ace_editor.session.setMode 'ace/mode/javascript'
+ace_editor = new droplet.Editor edit_element, {
+    mode: 'javascript',
+    viewSettings: {
+        padding: 10,
+        textPadding: 5,
+        colors: {
+            value: "#94c096",
+            assign: "#f3a55d",
+            declaration: "#f3a55d",
+            type: "#f3a55d",
+            control: "#ecc35b",
+            function: "#b593e6",
+            functionCall: "#889ee3",
+            logic: "#6fc2eb",
+            struct: "#f58c4f",
+            return: "#b593e6"
+        }
+    },
+    modeOptions: {
+        functions: {
+            'closest_among': {
+                color: 'value'
+                value: 'true'
+            },
+            'turn_toward': {
+                color: 'command'
+            },
+            'turn_to': {
+                color: 'command'
+            },
+            'turn': {
+                color: 'command'
+            },
+            'move': {
+                color: 'command'
+            },
+            'move_toward': {
+                color: 'command'
+            },
+            'start_shooting': {
+                color: 'command'
+            },
+            'stop_shooting': {
+                color: 'command'
+            },
+            'strike': {
+                color: 'command'
+            },
+            'cast': {
+                color: 'command'
+            },
+            'nock': {
+                color: 'command'
+            },
+            'loose': {
+                color: 'command'
+            },
+            '*.distance': {
+                color: 'value'
+                value: true
+            }
+            '*.dir_to': {
+                color: 'value'
+                value: true
+            }
+            '*.minus': {
+                color: 'value'
+                value: true
+            }
+            '*.plus': {
+                color: 'value'
+                value: true
+            }
+            '*.magnitude': {
+                color: 'value'
+                value: true
+            }
+            '*.dir': {
+                color: 'value'
+                value: true
+            }
+            '*.health': {
+                color: 'value'
+                value: true
+            }
+            '*.pos': {
+                color: 'value'
+                value: true
+            }
+            'enemies': {
+                color: 'value'
+                value: true
+            }
+            'allies': {
+                color: 'value'
+                value: true
+            }
+            'bullets': {
+                color: 'value'
+                value: true
+            }
+            'spells': {
+                color: 'value'
+                value: true
+            }
+            '*.times': {
+                color: 'value'
+                value: true
+            }
+            '*.filter': {
+                color: 'value'
+                value: true
+            }
+            '*.push': {
+                color: 'command'
+            }
+            'wrap_angle': {
+                color: 'value'
+                value: true
+            }
+            '*.map': {
+                color: 'value'
+                value: true
+            }
+        }
+    }
+    palette: [
+        {
+            name: 'Control'
+            color: 'orange'
+            blocks: [
+                {
+                    block: 'if (condition) {\n  \n}'
+                }
+                {
+                    block: 'if (condition) {\n  \n} else {\n  \n}'
+                }
+                {
+                    block: 'for (var i = 0; i < n; i++) {\n  \n}'
+                }
+                {
+                    block: 'while (condition) {\n  \n}'
+                }
+                {
+                    block: 'return;'
+                }
+            ]
+        }
+        {
+            name: 'Math'
+            color: 'blue'
+            blocks: [
+                {
+                    block: 'a + b'
+                }
+                {
+                    block: 'a - b'
+                }
+                {
+                    block: 'a * b'
+                }
+                {
+                    block: 'a / b'
+                }
+                {
+                    block: 'a > b'
+                }
+                {
+                    block: 'a >= b'
+                }
+                {
+                    block: 'a == b'
+                }
+                {
+                    block: 'a <= b'
+                }
+                {
+                    block: 'a < b'
+                }
+                {
+                    block: 'a && b'
+                }
+                {
+                    block: 'a || b'
+                }
+                {
+                    block: '!a'
+                }
+            ]
+        }
+        {
+            name: 'Vectors'
+            color: 'green'
+            blocks: [
+                {
+                    block: 'v.plus(u)'
+                }
+                {
+                    block: 'v.minus(u)'
+                }
+                {
+                    block: 'v.times(s)'
+                }
+                {
+                    block: 'v.dir()'
+                }
+                {
+                    block: 'v.magnitude()'
+                }
+                {
+                    block: 'v.dir_to(u)'
+                }
+                {
+                    block: 'v.distance(u)'
+                }
+                {
+                    block: 'wrap_angle(x)'
+                }
+            ]
+        }
+        {
+            name: 'Sensing'
+            color: 'red'
+            blocks: [
+                {
+                    block: 'closest_among(list)'
+                }
+                {
+                    block: 'enemies()'
+                }
+                {
+                    block: 'allies()'
+                }
+                {
+                    block: 'bullets()'
+                }
+                {
+                    block: 'spells()'
+                }
+                {
+                    block: 'walls()'
+                }
+                {
+                    block: 'me.health'
+                }
+                {
+                    block: 'me.dir'
+                }
+                {
+                    block: 'me.pos'
+                }
+            ]
+        }
+        {
+            name: 'Commands'
+            color: 'purple'
+            blocks: [
+                {
+                    block: 'turn_toward(x);'
+                }
+                {
+                    block: 'turn_to(dir);'
+                }
+                {
+                    block: 'turn(dir);'
+                }
+                {
+                    block: 'move(dir);'
+                }
+                {
+                    block: 'move_toward(x);'
+                }
+                {
+                    block: 'cast(x);'
+                }
+                {
+                    block: 'strike();'
+                }
+                {
+                    block: 'nock();'
+                }
+                {
+                    block: 'loose();'
+                }
+                {
+                    block: 'start_shooting();'
+                }
+                {
+                    block: 'stop_shooting();'
+                }
+            ]
+        }
+        {
+            name: 'Data'
+            color: 'yellow'
+            blocks: [
+                {
+                    block: 'var x = 0;'
+                }
+                {
+                    block: 'x = 1;'
+                }
+                {
+                    block: '[]'
+                }
+                {
+                    block: 'list[i]'
+                }
+                {
+                    block: 'x.length'
+                }
+                {
+                    block: 'list.push(x)'
+                }
+                {
+                    block: 'list.filter(function(x) {\n  \n})'
+                }
+                {
+                    block: 'list.map(function(x) {\n  \n})'
+                }
+            ]
+        }
+    ]
+}
 ace_editor.setValue SCRIPTS[character_templates[0]].ai, -1
 
 currently_editing = 0
@@ -1852,6 +2179,10 @@ ace_editor.on 'change', ->
     SCRIPTS[character_templates[currently_editing]].ai = ace_editor.getValue()
     do save
 
+ace_editor.aceEditor.on 'change', ->
+    SCRIPTS[character_templates[currently_editing]].ai = ace_editor.getValue()
+    do save
+
 CURRENT_MODE = 'PRACTICE'
 
 edit_screen = (from) ->
@@ -1872,6 +2203,8 @@ edit_screen = (from) ->
     document.getElementById('edit-screen').style.display = 'block'
     document.getElementById('lose-screen').style.display = 'none'
     document.getElementById('main-menu').style.display = 'none'
+
+    ace_editor.setValue SCRIPTS[character_templates[currently_editing]].ai, -1
 
     do rerender_tabs
 

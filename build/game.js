@@ -1527,18 +1527,18 @@
   };
 
   create_ai_from_template = function(program) {
-    return "var me;\n\nfunction wrap_angle(ang) {\n    return (((ang + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI)) - Math.PI\n}\n\nfunction Vector(x, y) {\n    this.x = x;\n    this.y = y;\n}\n\nVector.prototype.plus = function(o) {\n    return new Vector(this.x + o.x, this.y + o.y);\n};\n\nVector.prototype.minus = function(o) {\n    return new Vector(this.x - o.x, this.y - o.y);\n};\n\nVector.prototype.times = function(s) {\n    return new Vector(this.x * s, this.y * s);\n};\n\nVector.prototype.divided_by = function(s) {\n    return new Vector(this.x / s, this.y / s);\n};\n\nVector.prototype.magnitude = function() {\n    return Math.sqrt(this.x * this.x + this.y * this.y);\n};\n\nVector.prototype.dir_to = function(other) {\n    if (other.pos) other = other.pos;\n    return other.minus(this).dir();\n}\n\nVector.prototype.distance = function(other) {\n    if (other.pos) other = other.pos;\n    return this.minus(other).magnitude();\n}\n\nVector.prototype.unit = function() {\n  return this.divided_by(this.magnitude());\n};\n\nVector.prototype.dir = function() {\n  return Math.atan2(this.y, this.x);\n};\n\nfunction move(dir) {\n    postMessage({type: 'move', dir: dir})\n}\nfunction move_toward(pos) {\n    postMessage({type: 'move', dir: me.dir_to(pos)});\n}\nfunction turn(dir) {\n    postMessage({type: 'turn', dir: dir})\n}\nfunction turn_to(dir) {\n    normalized_delta = wrap_angle(dir - me.dir);\n    turn(10 * normalized_delta / Math.PI);\n}\nfunction turn_toward(pos) {\n    var desired_dir = me.dir_to(pos);\n    turn_to(desired_dir)\n}\nfunction strike() {\n    postMessage({type: 'strike'})\n}\nfunction start_shooting() {\n    postMessage({type: 'start_shooting'})\n}\nfunction stop_shooting() {\n    postMessage({type: 'stop_shooting'})\n}\nfunction nock() {\n    postMessage({type: 'nock'})\n}\nfunction loose() {\n    postMessage({type: 'loose'})\n}\nfunction cast(target) {\n    postMessage({type: 'cast', target: target})\n}\nfunction cancel_casting() {\n    postMessage({type: 'cancel_casting'})\n}\n\nfunction unpack(obj) {\n    if (obj.pos) {\n        obj.pos = new Vector(obj.pos.x, obj.pos.y)\n        obj.distance = function(x) { return obj.pos.distance(x); };\n        obj.dir_to = function(x) { return obj.pos.dir_to(x); };\n    }\n    if (obj.velocity) {\n        obj.velocity = new Vector(obj.velocity.x, obj.velocity.y)\n    }\n    return obj;\n}\n\nfunction closest_among(various) {\n    var min_dist = Infinity;\n    var closest = null;\n    for (var i = 0; i < various.length; i++) {\n        var candidate_dist = me.distance(various[i]);\n        if (candidate_dist < min_dist) {\n            min_dist = candidate_dist;\n            closest = various[i];\n        }\n    }\n    return closest;\n}\n\nonmessage = function(e) {\n    var info = e.data;\n    var characters = info.characters.map(unpack),\n        bullets = info.bullets.map(unpack),\n        spells = info.spells.map(unpack),\n        walls = info.walls.map(unpack);\n\n    var enemies = characters.filter(function(x) { return !x.allegiance; });\n    var allies = characters.filter(function(x) { return x.allegiance; });\n\n    me = unpack(info.main_character);\n\n    (function() {\n    " + program + "\n    }());\n\n    postMessage({type: 'ready'})\n}";
+    return "var me;\n\nfunction wrap_angle(ang) {\n    return (((ang + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI)) - Math.PI\n}\n\nfunction Vector(x, y) {\n    this.x = x;\n    this.y = y;\n}\n\nVector.prototype.plus = function(o) {\n    return new Vector(this.x + o.x, this.y + o.y);\n};\n\nVector.prototype.minus = function(o) {\n    return new Vector(this.x - o.x, this.y - o.y);\n};\n\nVector.prototype.times = function(s) {\n    return new Vector(this.x * s, this.y * s);\n};\n\nVector.prototype.divided_by = function(s) {\n    return new Vector(this.x / s, this.y / s);\n};\n\nVector.prototype.magnitude = function() {\n    return Math.sqrt(this.x * this.x + this.y * this.y);\n};\n\nVector.prototype.dir_to = function(other) {\n    if (other.pos) other = other.pos;\n    return other.minus(this).dir();\n}\n\nVector.prototype.distance = function(other) {\n    if (other.pos) other = other.pos;\n    return this.minus(other).magnitude();\n}\n\nVector.prototype.unit = function() {\n  return this.divided_by(this.magnitude());\n};\n\nVector.prototype.dir = function() {\n  return Math.atan2(this.y, this.x);\n};\n\nfunction move(dir) {\n    postMessage({type: 'move', dir: dir})\n}\nfunction move_toward(pos) {\n    postMessage({type: 'move', dir: me.dir_to(pos)});\n}\nfunction turn(dir) {\n    postMessage({type: 'turn', dir: dir})\n}\nfunction turn_to(dir) {\n    normalized_delta = wrap_angle(dir - me.dir);\n    turn(10 * normalized_delta / Math.PI);\n}\nfunction turn_toward(pos) {\n    var desired_dir = me.dir_to(pos);\n    turn_to(desired_dir)\n}\nfunction strike() {\n    postMessage({type: 'strike'})\n}\nfunction start_shooting() {\n    postMessage({type: 'start_shooting'})\n}\nfunction stop_shooting() {\n    postMessage({type: 'stop_shooting'})\n}\nfunction nock() {\n    postMessage({type: 'nock'})\n}\nfunction loose() {\n    postMessage({type: 'loose'})\n}\nfunction cast(target) {\n    postMessage({type: 'cast', target: target})\n}\nfunction cancel_casting() {\n    postMessage({type: 'cancel_casting'})\n}\n\nfunction unpack(obj) {\n    if (obj.pos) {\n        obj.pos = new Vector(obj.pos.x, obj.pos.y)\n        obj.distance = function(x) { return obj.pos.distance(x); };\n        obj.dir_to = function(x) { return obj.pos.dir_to(x); };\n    }\n    if (obj.velocity) {\n        obj.velocity = new Vector(obj.velocity.x, obj.velocity.y)\n    }\n    return obj;\n}\n\nfunction closest_among(various) {\n    var min_dist = Infinity;\n    var closest = null;\n    for (var i = 0; i < various.length; i++) {\n        var candidate_dist = me.distance(various[i]);\n        if (candidate_dist < min_dist) {\n            min_dist = candidate_dist;\n            closest = various[i];\n        }\n    }\n    return closest;\n}\n\nvar _characters, _bullets, _spells, _walls, _enemies, _allies;\n\nfunction characters() {\n    return _characters;\n}\nfunction bullets() {\n    return _bullets;\n}\nfunction walls() {\n    return _walls;\n}\nfunction spells() {\n    return _spells;\n}\nfunction enemies() {\n    return _enemies;\n}\nfunction allies() {\n    return _allies;\n}\n\nonmessage = function(e) {\n    var info = e.data;\n    _characters = info.characters.map(unpack);\n    _bullets = info.bullets.map(unpack);\n    _spells = info.spells.map(unpack);\n    _walls = info.walls.map(unpack);\n\n    _enemies = _characters.filter(function(x) { return !x.allegiance; });\n    _allies = _characters.filter(function(x) { return x.allegiance; });\n\n    me = unpack(info.main_character);\n\n    (function() {\n    " + program + "\n    }());\n\n    postMessage({type: 'ready'})\n}";
   };
 
   DUMBO = 'if (Math.random() < 1 / 60) {\n    direction = Math.random() * 2 * Math.PI;\n    move(direction);\n}';
 
-  ROGUE_AI = '/*\n * A basic Rogue AI that chases the nearest enemy.\n *\n * Improve on this to win more games!\n */\nvar target = closest_among(enemies);\nturn_toward(target);\nmove_toward(target);\nstart_shooting();';
+  ROGUE_AI = '// Basic Rogue AI; chases and shoots at enemies.\nvar target = closest_among(enemies());\nturn_toward(target);\nmove_toward(target);\nstart_shooting();';
 
-  KNIGHT_AI = '/*\n * A basic Knight AI that chases the nearest enemy.\n *\n * Improve on this to win more games!\n */\nvar target = closest_among(enemies);\nturn_toward(target);\nmove_toward(target);\nif (me.distance(target) <= 55) {\n    strike();\n}';
+  KNIGHT_AI = '// Basic Knight AI; chases and hits enemies.\nvar target = closest_among(enemies());\nturn_toward(target);\nmove_toward(target);\nif (me.distance(target) <= 55) {\n    strike();\n}';
 
-  MAGE_AI = '/*\n * A basic Mage AI that casts spells at the nearest enemy.\n *\n * Improve on this to win more games!\n */\nvar target = closest_among(enemies);\ncast(target.pos);';
+  MAGE_AI = '// Basic Rogue AI; casts spells at enemies.\nvar target = closest_among(enemies());\ncast(target.pos);';
 
-  ARCHER_AI = '/*\n * A basic Archer AI that flees and shoots arrows at the nearest enemy.\n *\n * Improve on this to win more games!\n */\nvar target = closest_among(enemies);\nturn_toward(target);\nif (me.ready_to_shoot) {\n    loose();\n}\nelse {\n    nock();\n}';
+  ARCHER_AI = '// Basic Archer AI; shoots at enemies.\nvar target = closest_among(enemies());\nturn_toward(target);\nif (me.ready_to_shoot) {\n    loose();\n}\nelse {\n    nock();\n}';
 
   DEFAULT_COLORS = {
     pants: 'black',
@@ -1661,9 +1661,278 @@
     return event.stopPropagation();
   };
 
-  ace_editor = ace.edit(edit_element);
-
-  ace_editor.session.setMode('ace/mode/javascript');
+  ace_editor = new droplet.Editor(edit_element, {
+    mode: 'javascript',
+    viewSettings: {
+      padding: 10,
+      textPadding: 5,
+      colors: {
+        value: "#94c096",
+        assign: "#f3a55d",
+        declaration: "#f3a55d",
+        type: "#f3a55d",
+        control: "#ecc35b",
+        "function": "#b593e6",
+        functionCall: "#889ee3",
+        logic: "#6fc2eb",
+        struct: "#f58c4f",
+        "return": "#b593e6"
+      }
+    },
+    modeOptions: {
+      functions: {
+        'closest_among': {
+          color: 'value',
+          value: 'true'
+        },
+        'turn_toward': {
+          color: 'command'
+        },
+        'turn_to': {
+          color: 'command'
+        },
+        'turn': {
+          color: 'command'
+        },
+        'move': {
+          color: 'command'
+        },
+        'move_toward': {
+          color: 'command'
+        },
+        'start_shooting': {
+          color: 'command'
+        },
+        'stop_shooting': {
+          color: 'command'
+        },
+        'strike': {
+          color: 'command'
+        },
+        'cast': {
+          color: 'command'
+        },
+        'nock': {
+          color: 'command'
+        },
+        'loose': {
+          color: 'command'
+        },
+        '*.distance': {
+          color: 'value',
+          value: true
+        },
+        '*.dir_to': {
+          color: 'value',
+          value: true
+        },
+        '*.minus': {
+          color: 'value',
+          value: true
+        },
+        '*.plus': {
+          color: 'value',
+          value: true
+        },
+        '*.magnitude': {
+          color: 'value',
+          value: true
+        },
+        '*.dir': {
+          color: 'value',
+          value: true
+        },
+        '*.health': {
+          color: 'value',
+          value: true
+        },
+        '*.pos': {
+          color: 'value',
+          value: true
+        },
+        'enemies': {
+          color: 'value',
+          value: true
+        },
+        'allies': {
+          color: 'value',
+          value: true
+        },
+        'bullets': {
+          color: 'value',
+          value: true
+        },
+        'spells': {
+          color: 'value',
+          value: true
+        },
+        '*.times': {
+          color: 'value',
+          value: true
+        },
+        '*.filter': {
+          color: 'value',
+          value: true
+        },
+        '*.push': {
+          color: 'command'
+        },
+        'wrap_angle': {
+          color: 'value',
+          value: true
+        },
+        '*.map': {
+          color: 'value',
+          value: true
+        }
+      }
+    },
+    palette: [
+      {
+        name: 'Control',
+        color: 'orange',
+        blocks: [
+          {
+            block: 'if (condition) {\n  \n}'
+          }, {
+            block: 'if (condition) {\n  \n} else {\n  \n}'
+          }, {
+            block: 'for (var i = 0; i < n; i++) {\n  \n}'
+          }, {
+            block: 'while (condition) {\n  \n}'
+          }, {
+            block: 'return;'
+          }
+        ]
+      }, {
+        name: 'Math',
+        color: 'blue',
+        blocks: [
+          {
+            block: 'a + b'
+          }, {
+            block: 'a - b'
+          }, {
+            block: 'a * b'
+          }, {
+            block: 'a / b'
+          }, {
+            block: 'a > b'
+          }, {
+            block: 'a >= b'
+          }, {
+            block: 'a == b'
+          }, {
+            block: 'a <= b'
+          }, {
+            block: 'a < b'
+          }, {
+            block: 'a && b'
+          }, {
+            block: 'a || b'
+          }, {
+            block: '!a'
+          }
+        ]
+      }, {
+        name: 'Vectors',
+        color: 'green',
+        blocks: [
+          {
+            block: 'v.plus(u)'
+          }, {
+            block: 'v.minus(u)'
+          }, {
+            block: 'v.times(s)'
+          }, {
+            block: 'v.dir()'
+          }, {
+            block: 'v.magnitude()'
+          }, {
+            block: 'v.dir_to(u)'
+          }, {
+            block: 'v.distance(u)'
+          }, {
+            block: 'wrap_angle(x)'
+          }
+        ]
+      }, {
+        name: 'Sensing',
+        color: 'red',
+        blocks: [
+          {
+            block: 'closest_among(list)'
+          }, {
+            block: 'enemies()'
+          }, {
+            block: 'allies()'
+          }, {
+            block: 'bullets()'
+          }, {
+            block: 'spells()'
+          }, {
+            block: 'walls()'
+          }, {
+            block: 'me.health'
+          }, {
+            block: 'me.dir'
+          }, {
+            block: 'me.pos'
+          }
+        ]
+      }, {
+        name: 'Commands',
+        color: 'purple',
+        blocks: [
+          {
+            block: 'turn_toward(x);'
+          }, {
+            block: 'turn_to(dir);'
+          }, {
+            block: 'turn(dir);'
+          }, {
+            block: 'move(dir);'
+          }, {
+            block: 'move_toward(x);'
+          }, {
+            block: 'cast(x);'
+          }, {
+            block: 'strike();'
+          }, {
+            block: 'nock();'
+          }, {
+            block: 'loose();'
+          }, {
+            block: 'start_shooting();'
+          }, {
+            block: 'stop_shooting();'
+          }
+        ]
+      }, {
+        name: 'Data',
+        color: 'yellow',
+        blocks: [
+          {
+            block: 'var x = 0;'
+          }, {
+            block: 'x = 1;'
+          }, {
+            block: '[]'
+          }, {
+            block: 'list[i]'
+          }, {
+            block: 'x.length'
+          }, {
+            block: 'list.push(x)'
+          }, {
+            block: 'list.filter(function(x) {\n  \n})'
+          }, {
+            block: 'list.map(function(x) {\n  \n})'
+          }
+        ]
+      }
+    ]
+  });
 
   ace_editor.setValue(SCRIPTS[character_templates[0]].ai, -1);
 
@@ -1814,6 +2083,11 @@
     return save();
   });
 
+  ace_editor.aceEditor.on('change', function() {
+    SCRIPTS[character_templates[currently_editing]].ai = ace_editor.getValue();
+    return save();
+  });
+
   CURRENT_MODE = 'PRACTICE';
 
   edit_screen = function(from) {
@@ -1833,6 +2107,7 @@
     document.getElementById('edit-screen').style.display = 'block';
     document.getElementById('lose-screen').style.display = 'none';
     document.getElementById('main-menu').style.display = 'none';
+    ace_editor.setValue(SCRIPTS[character_templates[currently_editing]].ai, -1);
     return rerender_tabs();
   };
 
