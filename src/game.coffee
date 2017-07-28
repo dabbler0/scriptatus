@@ -1465,10 +1465,12 @@ create_ai_from_template = (program) ->
     };
 
     Vector.prototype.dir_to = function(other) {
+        if (other.pos) other = other.pos;
         return other.minus(this).dir();
     }
 
     Vector.prototype.distance = function(other) {
+        if (other.pos) other = other.pos;
         return this.minus(other).magnitude();
     }
 
@@ -1484,7 +1486,7 @@ create_ai_from_template = (program) ->
         postMessage({type: 'move', dir: dir})
     }
     function move_toward(pos) {
-        postMessage({type: 'move', dir: pos.minus(me.pos).dir()});
+        postMessage({type: 'move', dir: me.dir_to(pos)});
     }
     function turn(dir) {
         postMessage({type: 'turn', dir: dir})
@@ -1494,7 +1496,7 @@ create_ai_from_template = (program) ->
         turn(10 * normalized_delta / Math.PI);
     }
     function turn_toward(pos) {
-        var desired_dir = pos.minus(me.pos).dir();
+        var desired_dir = me.dir_to(pos);
         turn_to(desired_dir)
     }
     function strike() {
@@ -1522,11 +1524,26 @@ create_ai_from_template = (program) ->
     function unpack(obj) {
         if (obj.pos) {
             obj.pos = new Vector(obj.pos.x, obj.pos.y)
+            obj.distance = function(x) { return obj.pos.distance(x); };
+            obj.dir_to = function(x) { return obj.pos.dir_to(x); };
         }
         if (obj.velocity) {
             obj.velocity = new Vector(obj.velocity.x, obj.velocity.y)
         }
         return obj;
+    }
+
+    function closest_among(various) {
+        var min_dist = Infinity;
+        var closest = null;
+        for (var i = 0; i < various.length; i++) {
+            var candidate_dist = me.distance(various[i]);
+            if (candidate_dist < min_dist) {
+                min_dist = candidate_dist;
+                closest = various[i];
+            }
+        }
+        return closest;
     }
 
     onmessage = function(e) {
@@ -1535,6 +1552,9 @@ create_ai_from_template = (program) ->
             bullets = info.bullets.map(unpack),
             spells = info.spells.map(unpack),
             walls = info.walls.map(unpack);
+
+        var enemies = characters.filter(function(x) { return !x.allegiance; });
+        var allies = characters.filter(function(x) { return x.allegiance; });
 
         me = unpack(info.main_character);
 
@@ -1559,29 +1579,10 @@ ROGUE_AI = '''
      *
      * Improve on this to win more games!
      */
-
-    // Always be shooting knives
-    start_shooting();
-
-    // Get players on the board NOT on our team
-    var enemies = characters.filter(function(x) { return !x.allegiance });
-
-    // Sort them by distance to us
-    enemies.sort(function(a, b) {
-        return a.pos.distance(me.pos) - b.pos.distance(me.pos);
-    });
-
-    // Get nearest enemy
-    var target = enemies[0];
-
-    // Turn towards it
-    turn_toward(target.pos);
-
-    // If we're farther than stabbing range,
-    // move towards it.
-    if (me.pos.distance(target.pos) > 40) {
-        move_toward(target.pos);
-    }'''
+    var target = closest_among(enemies);
+    turn_toward(target);
+    move_toward(target);
+    start_shooting();'''
 
 KNIGHT_AI = '''
     /*
@@ -1589,55 +1590,21 @@ KNIGHT_AI = '''
      *
      * Improve on this to win more games!
      */
-
-    // Get players on the board NOT on our team
-    var enemies = characters.filter(function(x) { return !x.allegiance });
-
-    // Sort them by distance to us
-    enemies.sort(function(a, b) {
-        return a.pos.distance(me.pos) - b.pos.distance(me.pos);
-    });
-
-    // Get nearest enemy
-    var target = enemies[0];
-
-    // Turn towards it and move towards it
-    turn_toward(target.pos);
-    move_toward(target.pos);
-
-    // If we're in range, strike
-    if (me.pos.distance(target.pos) <= 55) {
+    var target = closest_among(enemies);
+    turn_toward(target);
+    move_toward(target);
+    if (me.distance(target) <= 55) {
         strike();
     }'''
 
 MAGE_AI = '''
     /*
-     * A basic Mage AI that flees and casts spells at the nearest enemy.
+     * A basic Mage AI that casts spells at the nearest enemy.
      *
      * Improve on this to win more games!
      */
-
-    // Get players on the board NOT on our team
-    var enemies = characters.filter(function(x) { return !x.allegiance });
-
-    // Sort them by distance to us
-    enemies.sort(function(a, b) {
-        return a.pos.distance(me.pos) - b.pos.distance(me.pos);
-    });
-
-    // Get nearest enemy
-    var target = enemies[0];
-
-    // If the enemy is too close, run away!
-    if (me.pos.distance(target.pos) < 200) {
-        cancel_casting();
-        move(target.pos.dir_to(me.pos));
-    }
-
-    // Otherwise, cast a spell at them
-    else {
-        cast(target.pos);
-    }'''
+    var target = closest_among(enemies);
+    cast(target.pos);'''
 
 ARCHER_AI = '''
     /*
@@ -1645,33 +1612,11 @@ ARCHER_AI = '''
      *
      * Improve on this to win more games!
      */
-
-    // Get players on the board NOT on our team
-    var enemies = characters.filter(function(x) { return !x.allegiance });
-
-    // Sort them by distance to us
-    enemies.sort(function(a, b) {
-        return a.pos.distance(me.pos) - b.pos.distance(me.pos);
-    });
-
-    // Get nearest enemy
-    var target = enemies[0];
-
-    // Turn to them
-    turn_toward(target.pos);
-
-    // If the enemy is too close, run away!
-    if (me.pos.distance(target.pos) < 200) {
-        loose();
-        move(target.pos.dir_to(me.pos));
-    }
-
-    // If we have an arrow ready, shoot it at them.
-    else if (me.ready_to_shoot) {
+    var target = closest_among(enemies);
+    turn_toward(target);
+    if (me.ready_to_shoot) {
         loose();
     }
-
-    // Otherwise, nock one.
     else {
         nock();
     }'''
@@ -1716,14 +1661,25 @@ database = firebase.database()
 # Load scripts from the database once
 load_scripts = ->
     database.ref("/scripts/#{CURRENT_USER.uid}").once('value').then (snapshot) ->
-       SCRIPTS = snapshot.val().map (x) -> new Script x[0], x[1], x[2]
-       do update_prototype_list
+        if snapshot.val() == null
+            SCRIPTS = [
+                new Script('Basic', 'Mage', MAGE_AI),
+                new Script('Basic', 'Knight', KNIGHT_AI),
+                new Script('Basic', 'Archer', ARCHER_AI),
+                new Script('Basic', 'Rogue', ROGUE_AI)
+            ]
+        else
+            SCRIPTS = snapshot.val().map (x) -> new Script x[0], x[1], x[2]
+
+        ace_editor.setValue SCRIPTS[character_templates[currently_editing]].ai, -1
+        do update_prototype_list
 
 load_settings = ->
     database.ref("/settings/#{CURRENT_USER.uid}").once('value').then (snapshot) ->
         val = snapshot.val()
         character_templates = val?.character_templates ? [0, 0, 0, 0]
         enemy_templates = val?.enemy_templates ? [0, 0, 0, 0]
+        ace_editor.setValue SCRIPTS[character_templates[currently_editing]].ai, -1
         do rerender_tabs
         do rerender_enemy_tabs
 
